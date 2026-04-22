@@ -3,63 +3,107 @@
 <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>DSA-2 Quiz Platform</title>
+    <title>Quiz Platform Live</title>
     <link rel="stylesheet" href="styles.css" />
 </head>
 <body>
-<div class="container">
-    <h1>Online Quiz Platform (DSA-2)</h1>
+<div class="app-shell">
+    <header class="topbar">
+        <h1>Quiz Platform Live</h1>
+        <p>Rahoot-style UX with DSA-2 backend</p>
+    </header>
 
-    <section>
-        <h2>Create Quiz</h2>
-        <input id="quizTitle" placeholder="Quiz title" />
-        <input id="quizQuestionIds" placeholder="Question IDs (comma-separated)" value="101,102,103,104" />
-        <button onclick="createQuiz()">Create Quiz</button>
-        <p id="quizCode"></p>
-    </section>
+    <main>
+        <section id="screen-home" class="screen active">
+            <h2>Home</h2>
+            <p class="muted">Choose your role to start a live quiz session.</p>
+            <div class="actions">
+                <button onclick="showScreen('create')">Host Quiz</button>
+                <button class="ghost" onclick="showScreen('join')">Join Quiz</button>
+            </div>
+            <div class="info-grid">
+                <article>
+                    <h3>DSA Mapping</h3>
+                    <ul>
+                        <li>BST → question retrieval</li>
+                        <li>Heap → leaderboard ranking</li>
+                        <li>Graph → topic recommendations</li>
+                        <li>DP → optimization & trend</li>
+                        <li>Segment Tree → score analytics</li>
+                    </ul>
+                </article>
+                <article>
+                    <h3>Complexity</h3>
+                    <pre id="complexity-output">Click refresh to load...</pre>
+                    <button class="small" onclick="loadComplexities()">Refresh complexity map</button>
+                </article>
+            </div>
+        </section>
 
-    <section>
-        <h2>Join Quiz</h2>
-        <input id="joinCode" placeholder="Quiz code" />
-        <input id="participantName" placeholder="Your name" />
-        <button onclick="joinQuiz()">Join Quiz</button>
-        <p id="participantId"></p>
-    </section>
+        <section id="screen-create" class="screen">
+            <h2>Create Quiz Session</h2>
+            <input id="create-title" placeholder="Quiz title" value="DSA-2 Live Quiz" />
+            <input id="create-questions" placeholder="Question IDs (comma-separated)" value="101,102,103,104" />
+            <input id="create-duration" type="number" min="5" max="60" placeholder="Question timer (seconds)" value="12" />
+            <div class="actions">
+                <button onclick="createSession()">Create Session</button>
+                <button class="ghost" onclick="showScreen('home')">Back</button>
+            </div>
+            <p id="create-message" class="status"></p>
+        </section>
 
-    <section>
-        <h2>Submit Answers</h2>
-        <input id="submitCode" placeholder="Quiz code" />
-        <input id="submitParticipantId" placeholder="Participant ID" />
-        <input id="answers" placeholder='Answers JSON, e.g. {"101":1,"102":1}' value='{"101":1,"102":1,"103":1,"104":1}' />
-        <button onclick="submitQuiz()">Submit</button>
-        <pre id="scoreResult"></pre>
-    </section>
+        <section id="screen-join" class="screen">
+            <h2>Join Session</h2>
+            <input id="join-session-id" placeholder="Session ID" />
+            <input id="join-name" placeholder="Your name" />
+            <div class="actions">
+                <button onclick="joinSession()">Join</button>
+                <button class="ghost" onclick="showScreen('home')">Back</button>
+            </div>
+            <p id="join-message" class="status"></p>
+        </section>
 
-    <section>
-        <h2>Leaderboard (Heap)</h2>
-        <input id="leaderboardCode" placeholder="Quiz code" />
-        <button onclick="loadLeaderboard()">Load Leaderboard</button>
-        <pre id="leaderboardResult"></pre>
-    </section>
+        <section id="screen-lobby" class="screen">
+            <h2>Waiting Lobby</h2>
+            <p>Session: <strong id="lobby-session"></strong></p>
+            <p>State: <strong id="lobby-state"></strong></p>
+            <p>Players joined: <strong id="lobby-count">0</strong></p>
+            <ul id="lobby-players" class="players"></ul>
+            <div class="actions" id="host-controls">
+                <button onclick="startSession()">Start Quiz</button>
+            </div>
+        </section>
 
-    <section>
-        <h2>Recommendations (Graph BFS/DFS/Topo)</h2>
-        <input id="recTopic" placeholder="Start topic" value="Arrays" />
-        <select id="recMode">
-            <option value="bfs">BFS</option>
-            <option value="dfs">DFS</option>
-            <option value="topo">Topological Sort</option>
-        </select>
-        <button onclick="recommend()">Recommend</button>
-        <pre id="recResult"></pre>
-    </section>
+        <section id="screen-live" class="screen">
+            <div class="live-head">
+                <h2>Live Quiz</h2>
+                <div class="timer" id="live-timer">0s</div>
+            </div>
+            <p class="muted">Question <span id="live-index">1</span>/<span id="live-total">1</span></p>
+            <h3 id="live-question">Loading question...</h3>
+            <div id="live-options" class="options"></div>
+            <p id="answer-status" class="status"></p>
+            <div class="actions">
+                <button class="small" onclick="manualLeaderboardRefresh()">Refresh Leaderboard</button>
+            </div>
+            <ol id="live-leaderboard" class="leaderboard"></ol>
+        </section>
 
-    <section>
-        <h2>Complexity Map</h2>
-        <button onclick="loadComplexities()">Show Complexity</button>
-        <pre id="complexityResult"></pre>
-    </section>
+        <section id="screen-results" class="screen">
+            <h2>Session Results</h2>
+            <p>Session: <strong id="result-session"></strong></p>
+            <p>Total Score Range (Segment Tree): <strong id="result-range">0</strong></p>
+            <h3>Final Leaderboard</h3>
+            <ol id="result-leaderboard" class="leaderboard"></ol>
+            <h3>Performance Trend (LIS)</h3>
+            <pre id="result-lis"></pre>
+            <div class="actions">
+                <button onclick="showScreen('home')">Back Home</button>
+            </div>
+        </section>
+    </main>
 </div>
+
 <script src="app.js"></script>
 </body>
 </html>
