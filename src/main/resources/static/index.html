@@ -1,0 +1,65 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>DSA-2 Quiz Platform</title>
+    <link rel="stylesheet" href="styles.css" />
+</head>
+<body>
+<div class="container">
+    <h1>Online Quiz Platform (DSA-2)</h1>
+
+    <section>
+        <h2>Create Quiz</h2>
+        <input id="quizTitle" placeholder="Quiz title" />
+        <input id="quizQuestionIds" placeholder="Question IDs (comma-separated)" value="101,102,103,104" />
+        <button onclick="createQuiz()">Create Quiz</button>
+        <p id="quizCode"></p>
+    </section>
+
+    <section>
+        <h2>Join Quiz</h2>
+        <input id="joinCode" placeholder="Quiz code" />
+        <input id="participantName" placeholder="Your name" />
+        <button onclick="joinQuiz()">Join Quiz</button>
+        <p id="participantId"></p>
+    </section>
+
+    <section>
+        <h2>Submit Answers</h2>
+        <input id="submitCode" placeholder="Quiz code" />
+        <input id="submitParticipantId" placeholder="Participant ID" />
+        <input id="answers" placeholder='Answers JSON, e.g. {"101":1,"102":1}' value='{"101":1,"102":1,"103":1,"104":1}' />
+        <button onclick="submitQuiz()">Submit</button>
+        <pre id="scoreResult"></pre>
+    </section>
+
+    <section>
+        <h2>Leaderboard (Heap)</h2>
+        <input id="leaderboardCode" placeholder="Quiz code" />
+        <button onclick="loadLeaderboard()">Load Leaderboard</button>
+        <pre id="leaderboardResult"></pre>
+    </section>
+
+    <section>
+        <h2>Recommendations (Graph BFS/DFS/Topo)</h2>
+        <input id="recTopic" placeholder="Start topic" value="Arrays" />
+        <select id="recMode">
+            <option value="bfs">BFS</option>
+            <option value="dfs">DFS</option>
+            <option value="topo">Topological Sort</option>
+        </select>
+        <button onclick="recommend()">Recommend</button>
+        <pre id="recResult"></pre>
+    </section>
+
+    <section>
+        <h2>Complexity Map</h2>
+        <button onclick="loadComplexities()">Show Complexity</button>
+        <pre id="complexityResult"></pre>
+    </section>
+</div>
+<script src="app.js"></script>
+</body>
+</html>
