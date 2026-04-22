@@ -1,10 +1,10 @@
-# Online Quiz Platform Using DSA-2 (Spring Boot + MySQL + HTML/CSS/JS)
+# Online Quiz Platform Using DSA-2 (Spring Boot + MySQL + Live Quiz UX)
 
-A full-stack Java quiz platform where each required DSA-2 concept is manually implemented and directly used in a real feature.
+A full-stack Java quiz platform where DSA-2 algorithms are manually implemented and now enhanced with a Rahoot-style real-time interaction layer.
 
 ## Tech Stack
 - Backend: Java 17, Spring Boot
-- Frontend: HTML/CSS/JavaScript (served from Spring static resources)
+- Frontend: HTML/CSS/JavaScript (multi-screen live flow in static resources)
 - Database: MySQL (config included)
 
 ## DSA-2 Implementations and Feature Mapping
@@ -17,19 +17,38 @@ A full-stack Java quiz platform where each required DSA-2 concept is manually im
 | Performance trend | LIS (DP) | `dsa/DynamicProgrammingUtils.java` |
 | Score analytics | Segment Tree range query | `dsa/SegmentTree.java` |
 
-## API Features
-- `POST /api/questions` - create question
-- `DELETE /api/questions/{id}` - delete question (BST delete)
-- `GET /api/questions` - list questions in BST inorder
-- `POST /api/quizzes` - create quiz
-- `GET /api/quizzes/{code}/questions` - fetch quiz questions (BST search)
-- `POST /api/quizzes/{code}/join` - join quiz
-- `POST /api/quizzes/{code}/submit` - submit answers
-- `GET /api/quizzes/{code}/leaderboard` - leaderboard (Heap)
-- `POST /api/quizzes/{code}/optimize?maxWeight=6` - optimize set (Knapsack)
-- `GET /api/quizzes/{code}/analytics?left=0&right=2&participantId=...` - analytics (Segment Tree + LIS)
-- `GET /api/recommendations?topic=Arrays&mode=bfs|dfs|topo` - graph traversal recommendations
-- `GET /api/complexities` - complexity output for viva
+## Live Quiz Enhancement Layer (Rahoot-style UX)
+The existing DSA-backed system is upgraded with a real-time session flow:
+1. Host creates a session
+2. Players join via session code
+3. Waiting lobby shows player count
+4. Host starts live quiz
+5. Timer-based question progression (polling every ~2.5 seconds)
+6. Players answer each question
+7. Leaderboard updates continuously
+8. Results view shows final ranking + analytics
+
+## Session APIs (New)
+- `POST /session/create` - create live session
+- `POST /session/join?sessionId={id}` - join existing live session
+- `GET /session/{id}/question?start=true|false` - fetch current question / start by host
+- `POST /session/{id}/answer` - submit answer for current question
+- `GET /session/{id}/leaderboard` - heap-based live ranking
+- `GET /session/{id}/results` - final leaderboard + Segment Tree + LIS analytics
+
+## Existing APIs (Preserved)
+- `POST /api/questions`
+- `DELETE /api/questions/{id}`
+- `GET /api/questions`
+- `POST /api/quizzes`
+- `GET /api/quizzes/{code}/questions`
+- `POST /api/quizzes/{code}/join`
+- `POST /api/quizzes/{code}/submit`
+- `GET /api/quizzes/{code}/leaderboard`
+- `POST /api/quizzes/{code}/optimize?maxWeight=6`
+- `GET /api/quizzes/{code}/analytics?left=0&right=2&participantId=...`
+- `GET /api/recommendations?topic=Arrays&mode=bfs|dfs|topo`
+- `GET /api/complexities`
 
 ## Time Complexity Output (also available in API)
 - BST Insert/Search/Delete: `O(h)`
@@ -44,7 +63,7 @@ A full-stack Java quiz platform where each required DSA-2 concept is manually im
 2. Configure MySQL (optional for this DSA-focused in-memory runtime):
    - DB: `quiz_platform`
    - Update credentials in `src/main/resources/application.properties`
-3. Start backend + frontend:
+3. Start app:
    ```bash
    mvn spring-boot:run
    ```
@@ -56,7 +75,7 @@ A full-stack Java quiz platform where each required DSA-2 concept is manually im
 mvn test
 ```
 
-## Viva-Friendly Notes
-- Every mandatory DSA-2 topic is implemented manually in dedicated classes.
-- Each algorithm is wired into a visible user feature (no unused algorithm).
-- UI demonstrates create/join/submit/leaderboard/recommendation flows.
+## Verification Notes
+- Existing DSA modules are preserved and still power backend features.
+- New UI/UX is an enhancement layer, not a rewrite.
+- Added tests for live session service flow and session API responses.
