@@ -1,6 +1,6 @@
 # Online Quiz Platform Using DSA-2 (Spring Boot + MySQL + Live Quiz UX)
 
-A full-stack Java quiz platform where DSA-2 algorithms are manually implemented and now enhanced with a Rahoot-style real-time interaction layer.
+A full-stack Java quiz platform where DSA-2 algorithms are manually implemented and now enhanced with a Kahoot-style real-time interaction layer.
 
 ## Tech Stack
 - Backend: Java 17, Spring Boot
@@ -17,7 +17,7 @@ A full-stack Java quiz platform where DSA-2 algorithms are manually implemented 
 | Performance trend | LIS (DP) | `dsa/DynamicProgrammingUtils.java` |
 | Score analytics | Segment Tree range query | `dsa/SegmentTree.java` |
 
-## Live Quiz Enhancement Layer (Rahoot-style UX)
+## Live Quiz Enhancement Layer (Kahoot-style UX)
 The existing DSA-backed system is upgraded with a real-time session flow:
 1. Host creates a session
 2. Players join via session code
