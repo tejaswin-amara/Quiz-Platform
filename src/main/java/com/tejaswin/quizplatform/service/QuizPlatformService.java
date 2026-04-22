@@ -16,10 +16,12 @@ import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.UUID;
-import java.util.stream.Collectors;
 
 @Service
 public class QuizPlatformService {
+    private static final int QUIZ_CODE_LENGTH = 6;
+    private static final int POINTS_PER_DIFFICULTY_LEVEL = 10;
+
     private final QuestionBST questionBST = new QuestionBST();
     private final TopicGraph topicGraph = new TopicGraph();
     private final Map<Long, Question> allQuestions = new HashMap<>();
@@ -45,7 +47,7 @@ public class QuizPlatformService {
     }
 
     public Quiz createQuiz(String title, List<Long> questionIds) {
-        String code = UUID.randomUUID().toString().substring(0, 6).toUpperCase();
+        String code = generateQuizCode();
         Quiz quiz = new Quiz(code, title, questionIds);
         quizzes.put(code, quiz);
         quizScores.put(code, new HashMap<>());
@@ -58,7 +60,9 @@ public class QuizPlatformService {
         String participantId = UUID.randomUUID().toString();
         participantNames.put(participantId, participantName);
         quizScores.get(code).put(participantId, 0);
-        quizScoreHistory.get(code).put(participantId, new ArrayList<>(List.of(0)));
+        List<Integer> initialHistory = new ArrayList<>();
+        initialHistory.add(0);
+        quizScoreHistory.get(code).put(participantId, initialHistory);
         return Map.of("participantId", participantId, "quizCode", code);
     }
 
@@ -80,7 +84,7 @@ public class QuizPlatformService {
             Question question = questionBST.search(questionId);
             Integer selectedOption = answers.get(questionId);
             if (question != null && selectedOption != null && selectedOption == question.correctOption()) {
-                score += question.difficulty() * 10;
+                score += question.difficulty() * POINTS_PER_DIFFICULTY_LEVEL;
             }
         }
         quizScores.get(code).put(participantId, score);
@@ -156,6 +160,18 @@ public class QuizPlatformService {
             throw new IllegalArgumentException("Quiz not found: " + code);
         }
         return quiz;
+    }
+
+    private String generateQuizCode() {
+        String code;
+        do {
+            String compactUuid = UUID.randomUUID().toString().replace("-", "");
+            if (compactUuid.length() < QUIZ_CODE_LENGTH) {
+                throw new IllegalStateException("Generated UUID is shorter than expected code length");
+            }
+            code = compactUuid.substring(0, QUIZ_CODE_LENGTH).toUpperCase();
+        } while (quizzes.containsKey(code));
+        return code;
     }
 
     public void seedQuestionsIfEmpty() {

@@ -1,12 +1,14 @@
 package com.tejaswin.quizplatform.dsa;
 
 public class SegmentTree {
+    private static final int TREE_SIZE_MULTIPLIER = 4;
+
     private final int[] tree;
     private final int n;
 
     public SegmentTree(int[] arr) {
         this.n = arr.length;
-        this.tree = new int[Math.max(1, 4 * Math.max(1, n))];
+        this.tree = new int[Math.max(1, TREE_SIZE_MULTIPLIER * n)];
         if (n > 0) {
             build(arr, 1, 0, n - 1);
         }

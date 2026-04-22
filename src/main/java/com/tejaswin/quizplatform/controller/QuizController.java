@@ -17,7 +17,6 @@ import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
 import java.util.Map;
-import java.util.stream.Collectors;
 
 @RestController
 @RequestMapping("/api")
@@ -74,9 +73,7 @@ public class QuizController {
 
     @PostMapping("/quizzes/{code}/submit")
     public Object submitQuiz(@PathVariable String code, @RequestBody SubmitQuizRequest request) {
-        Map<Long, Integer> parsedAnswers = request.answers().entrySet().stream()
-                .collect(Collectors.toMap(entry -> Long.parseLong(entry.getKey()), Map.Entry::getValue));
-        return service.submitAnswers(code, request.participantId(), parsedAnswers);
+        return service.submitAnswers(code, request.participantId(), request.answers());
     }
 
     @GetMapping("/quizzes/{code}/leaderboard")

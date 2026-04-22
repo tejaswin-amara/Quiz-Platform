@@ -14,8 +14,8 @@ async function createQuiz() {
   const title = document.getElementById("quizTitle").value;
   const questionIds = document.getElementById("quizQuestionIds").value
     .split(",")
-    .map((id) => Number(id.trim()))
-    .filter((id) => !Number.isNaN(id));
+    .map((idStr) => Number(idStr.trim()))
+    .filter((parsedId) => !Number.isNaN(parsedId));
 
   const data = await api("/api/quizzes", {
     method: "POST",
