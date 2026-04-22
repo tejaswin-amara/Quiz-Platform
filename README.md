@@ -1,42 +1,56 @@
-# Online Quiz Platform Using DSA-2 (Spring Boot + MySQL + Live Quiz UX)
+# Quiz Platform (DSA-2 + Kahoot-style Live Sessions)
 
-A full-stack Java quiz platform where DSA-2 algorithms are manually implemented and now enhanced with a Kahoot-style real-time interaction layer.
+Production-hardened Spring Boot quiz platform with a live session enhancement layer and explicit DSA visibility for viva.
 
-## Tech Stack
-- Backend: Java 17, Spring Boot
-- Frontend: HTML/CSS/JavaScript (multi-screen live flow in static resources)
-- Database: MySQL (config included)
+## 1) System Architecture (high level)
 
-## DSA-2 Implementations and Feature Mapping
-| Feature | DSA Used | File |
-|---|---|---|
-| Question storage/retrieval | Binary Search Tree (insert/search/delete/traversal) | `dsa/QuestionBST.java` |
-| Topic recommendations | Graph + BFS/DFS/Topological Sort | `dsa/TopicGraph.java` |
-| Leaderboard ranking | Manual Max Heap (Priority Queue) | `dsa/MaxHeap.java` |
-| Quiz optimization | 0/1 Knapsack (DP) | `dsa/DynamicProgrammingUtils.java` |
-| Performance trend | LIS (DP) | `dsa/DynamicProgrammingUtils.java` |
-| Score analytics | Segment Tree range query | `dsa/SegmentTree.java` |
+```text
+[Browser UI: Home/Create/Join/Lobby/Live/Results]
+            |
+            v
+[REST Controllers]
+  - /api/* (core quiz + DSA features)
+  - /session/* (live session flow)
+  - /dsa/insights (viva visibility)
+            |
+            v
+[Services]
+  - QuizPlatformService (core quiz operations + DSA orchestration)
+  - SessionService (live lifecycle, timer progression, expiry cleanup)
+  - LeaderboardService (heap ranking)
+  - AnalyticsService (segment tree + LIS analytics)
+            |
+            v
+[DSA Modules + Persistence]
+  - BST, Heap, Graph, DP, SegmentTree
+  - H2 (default) / MySQL (prod profile)
+```
 
-## Live Quiz Enhancement Layer (Kahoot-style UX)
-The existing DSA-backed system is upgraded with a real-time session flow:
-1. Host creates a session
-2. Players join via session code
-3. Waiting lobby shows player count
-4. Host starts live quiz
-5. Timer-based question progression (polling every ~2.5 seconds)
-6. Players answer each question
-7. Leaderboard updates continuously
-8. Results view shows final ranking + analytics
+## 2) DSA Mapping Table
 
-## Session APIs (New)
-- `POST /session/create` - create live session
-- `POST /session/join?sessionId={id}` - join existing live session
-- `GET /session/{id}/question?start=true|false` - fetch current question / start by host
-- `POST /session/{id}/answer` - submit answer for current question
-- `GET /session/{id}/leaderboard` - heap-based live ranking
-- `GET /session/{id}/results` - final leaderboard + Segment Tree + LIS analytics
+| DSA | What it does | Where it is used | Complexity |
+|---|---|---|---|
+| BST | Stores/retrieves questions | Quiz creation, question fetch in live/core flows | `O(h)` |
+| Max Heap | Ranks leaderboard | Live and normal leaderboard endpoints | `O(n log n)` for full rank extraction |
+| Graph (BFS/DFS/Topo) | Topic recommendation order | `/api/recommendations` | `O(V + E)` |
+| DP (Knapsack) | Quiz optimization by weight | `/api/quizzes/{code}/optimize` | `O(n × W)` |
+| DP (LIS) | Trend scoring over attempts | Analytics and session results | `O(n²)` |
+| Segment Tree | Range score aggregation | Analytics and final results | `O(log n)` query |
 
-## Existing APIs (Preserved)
+## 3) Live Session Flow
+
+1. Host creates session (`POST /session/create`)
+2. Players join (`POST /session/join`)
+3. Lobby updates via polling
+4. Host starts quiz (`GET /session/{id}/question?start=true`)
+5. Timer controls question progression
+6. Players submit answers (`POST /session/{id}/answer`)
+7. Leaderboard refreshes (`GET /session/{id}/leaderboard`)
+8. Final results (`GET /session/{id}/results`)
+
+## 4) API Documentation
+
+### Core API (`/api`)
 - `POST /api/questions`
 - `DELETE /api/questions/{id}`
 - `GET /api/questions`
@@ -50,32 +64,96 @@ The existing DSA-backed system is upgraded with a real-time session flow:
 - `GET /api/recommendations?topic=Arrays&mode=bfs|dfs|topo`
 - `GET /api/complexities`
 
-## Time Complexity Output (also available in API)
-- BST Insert/Search/Delete: `O(h)`
-- Heap Insert/ExtractMax: `O(log n)`
-- BFS/DFS/Topological Sort: `O(V + E)`
-- Knapsack DP: `O(n × W)`
-- LIS DP: `O(n²)`
-- Segment Tree Range Query: `O(log n)`
+### Live session API (`/session`)
+- `POST /session/create`
+- `POST /session/join`
+- `GET /session/{id}/question`
+- `POST /session/{id}/answer`
+- `GET /session/{id}/leaderboard`
+- `GET /session/{id}/results`
 
-## Run Instructions
-1. Ensure Java 17+ and Maven are installed.
-2. Configure MySQL (optional for this DSA-focused in-memory runtime):
-   - DB: `quiz_platform`
-   - Update credentials in `src/main/resources/application.properties`
-3. Start app:
-   ```bash
-   mvn spring-boot:run
-   ```
-4. Open UI:
-   - `http://localhost:8080`
+### DSA insights API
+- `GET /dsa/insights`
 
-## Run Tests
+## 5) Persistence
+
+- Default profile: **H2 file DB** (no setup)
+- Production profile: **MySQL** via `application-prod.properties`
+- Persisted entities:
+  - Questions
+  - Quizzes
+  - Quiz submission results
+
+## 6) Validation, Errors, and Logging
+
+- Request validation with Jakarta Bean Validation
+- Centralized error handling via `@RestControllerAdvice`
+- Structured logs for:
+  - session create/start/join
+  - answer submission
+  - leaderboard refresh
+  - session cleanup
+
+## 7) Frontend Features
+
+- Multi-screen flow (Home, Create, Join, Lobby, Live, Results)
+- Loading indicators and better error messages
+- Top-3 leaderboard highlighting
+- Result stats: average score, rank, difficulty impact, LIS trends
+- DSA Insights panel for viva explanation
+
+## 8) Run Locally
+
+### Prerequisites
+- Java 17+
+- Maven
+
+### Start app
+```bash
+mvn spring-boot:run
+```
+
+Open:
+- `http://localhost:8080`
+- `http://localhost:8080/h2-console` (default local profile)
+
+## 9) Run Tests
+
 ```bash
 mvn test
 ```
 
-## Verification Notes
-- Existing DSA modules are preserved and still power backend features.
-- New UI/UX is an enhancement layer, not a rewrite.
-- Added tests for live session service flow and session API responses.
+## 10) Deploy with Docker
+
+### Build and run with compose
+```bash
+docker compose up --build
+```
+
+This starts:
+- `app` on `8080`
+- `mysql` on `3306`
+
+### Direct container run
+```bash
+docker build -t quiz-platform .
+docker run -p 8080:8080 \
+  -e SPRING_PROFILES_ACTIVE=prod \
+  -e DB_URL=jdbc:mysql://<host>:3306/quiz_platform \
+  -e DB_USERNAME=<user> \
+  -e DB_PASSWORD=<password> \
+  quiz-platform
+```
+
+## 11) Viva Notes (quick explanation)
+
+- **BST** is used for question retrieval so lookups scale with tree height (`O(h)`).
+- **Heap** powers rank extraction so leaderboard is always sorted by score.
+- **Graph traversals** justify recommendation paths (BFS/DFS/Topo) with `O(V+E)`.
+- **Knapsack DP** demonstrates optimization, and **LIS DP** demonstrates trend analysis.
+- **Segment Tree** provides efficient score range aggregation for analytics.
+
+## 12) Screenshot
+
+Live UI screenshot:
+- https://github.com/user-attachments/assets/6bead3e0-a69e-47c9-9c72-ee1da0bab0b2

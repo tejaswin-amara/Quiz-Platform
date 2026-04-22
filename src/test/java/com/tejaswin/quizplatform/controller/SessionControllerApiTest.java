@@ -7,6 +7,7 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMockMvc;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.http.MediaType;
+import org.springframework.test.context.TestPropertySource;
 import org.springframework.test.web.servlet.MockMvc;
 
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
@@ -16,6 +17,10 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 
 @SpringBootTest
 @AutoConfigureMockMvc
+@TestPropertySource(properties = {
+        "spring.datasource.url=jdbc:h2:mem:quiz-platform-api;DB_CLOSE_DELAY=-1",
+        "spring.jpa.hibernate.ddl-auto=create-drop"
+})
 class SessionControllerApiTest {
 
     @Autowired
@@ -39,9 +44,8 @@ class SessionControllerApiTest {
         String sessionId = createJson.get("sessionId").asText();
 
         String joinResponse = mockMvc.perform(post("/session/join")
-                        .param("sessionId", sessionId)
                         .contentType(MediaType.APPLICATION_JSON)
-                        .content("{\"participantName\":\"Tester\"}"))
+                        .content("{\"sessionId\":\"" + sessionId + "\",\"participantName\":\"Tester\"}"))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.participantId").exists())
                 .andReturn()
@@ -68,6 +72,20 @@ class SessionControllerApiTest {
         mockMvc.perform(get("/session/{id}/results", sessionId))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.leaderboard").isArray())
+                .andExpect(jsonPath("$.averageScore").exists())
                 .andExpect(jsonPath("$.lisPerformanceTrend").exists());
+    }
+
+    @Test
+    void shouldReturnBadRequestForInvalidSessionAndValidationFailures() throws Exception {
+        mockMvc.perform(post("/session/join")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"sessionId\":\"INVALID\",\"participantName\":\"Tester\"}"))
+                .andExpect(status().isBadRequest());
+
+        mockMvc.perform(post("/session/create")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"title\":\"\",\"questionIds\":[],\"questionDurationSeconds\":2}"))
+                .andExpect(status().isBadRequest());
     }
 }

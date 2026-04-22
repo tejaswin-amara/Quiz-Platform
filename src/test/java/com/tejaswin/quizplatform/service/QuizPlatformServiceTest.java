@@ -3,6 +3,9 @@ package com.tejaswin.quizplatform.service;
 import com.tejaswin.quizplatform.model.Question;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.boot.test.context.SpringBootTest;
+import org.springframework.test.context.TestPropertySource;
 
 import java.util.List;
 import java.util.Map;
@@ -11,23 +14,28 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 
+@SpringBootTest
+@TestPropertySource(properties = {
+        "spring.datasource.url=jdbc:h2:mem:quiz-platform-service;DB_CLOSE_DELAY=-1",
+        "spring.jpa.hibernate.ddl-auto=create-drop"
+})
 class QuizPlatformServiceTest {
 
+    @Autowired
     private QuizPlatformService service;
 
     @BeforeEach
     void setup() {
-        service = new QuizPlatformService();
-        service.addQuestion(new Question(1, "Q1", List.of("a", "b"), 1, "Arrays", 2, 2));
-        service.addQuestion(new Question(2, "Q2", List.of("a", "b"), 0, "Graphs", 3, 3));
+        service.addQuestion(new Question(1001, "Q1", List.of("a", "b"), 1, "Arrays", 2, 2));
+        service.addQuestion(new Question(1002, "Q2", List.of("a", "b"), 0, "Graphs", 3, 3));
     }
 
     @Test
     void shouldRunEndToEndQuizFlowWithDsaIntegrations() {
-        String quizCode = service.createQuiz("DSA", List.of(1L, 2L)).code();
+        String quizCode = service.createQuiz("DSA", List.of(1001L, 1002L)).code();
         String participantId = service.joinQuiz(quizCode, "Tejas").get("participantId");
 
-        Map<String, Object> result = service.submitAnswers(quizCode, participantId, Map.of(1L, 1, 2L, 0));
+        Map<String, Object> result = service.submitAnswers(quizCode, participantId, Map.of(1001L, 1, 1002L, 0));
         assertEquals(50, result.get("score"));
 
         assertFalse(service.leaderboard(quizCode).isEmpty());
@@ -39,5 +47,6 @@ class QuizPlatformServiceTest {
         assertNotNull(optimized.get("selectedQuestions"));
 
         assertFalse(service.recommendTopics("Arrays", "bfs").isEmpty());
+        assertNotNull(service.dsaInsights().get("questionFlow"));
     }
 }

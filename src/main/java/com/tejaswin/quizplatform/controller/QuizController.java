@@ -6,6 +6,7 @@ import com.tejaswin.quizplatform.dto.JoinQuizRequest;
 import com.tejaswin.quizplatform.dto.SubmitQuizRequest;
 import com.tejaswin.quizplatform.model.Question;
 import com.tejaswin.quizplatform.service.QuizPlatformService;
+import jakarta.validation.Valid;
 import jakarta.annotation.PostConstruct;
 import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
@@ -33,7 +34,7 @@ public class QuizController {
     }
 
     @PostMapping("/questions")
-    public Question createQuestion(@RequestBody CreateQuestionRequest request) {
+    public Question createQuestion(@Valid @RequestBody CreateQuestionRequest request) {
         return service.addQuestion(new Question(
                 request.id(),
                 request.text(),
@@ -57,7 +58,7 @@ public class QuizController {
     }
 
     @PostMapping("/quizzes")
-    public Object createQuiz(@RequestBody CreateQuizRequest request) {
+    public Object createQuiz(@Valid @RequestBody CreateQuizRequest request) {
         return service.createQuiz(request.title(), request.questionIds());
     }
 
@@ -67,12 +68,12 @@ public class QuizController {
     }
 
     @PostMapping("/quizzes/{code}/join")
-    public Object joinQuiz(@PathVariable String code, @RequestBody JoinQuizRequest request) {
+    public Object joinQuiz(@PathVariable String code, @Valid @RequestBody JoinQuizRequest request) {
         return service.joinQuiz(code, request.participantName());
     }
 
     @PostMapping("/quizzes/{code}/submit")
-    public Object submitQuiz(@PathVariable String code, @RequestBody SubmitQuizRequest request) {
+    public Object submitQuiz(@PathVariable String code, @Valid @RequestBody SubmitQuizRequest request) {
         return service.submitAnswers(code, request.participantId(), request.answers());
     }
 

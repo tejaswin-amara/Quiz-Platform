@@ -1,0 +1,33 @@
+version: "3.8"
+
+services:
+  db:
+    image: mysql:8.0
+    container_name: quiz-platform-db
+    environment:
+      MYSQL_DATABASE: quiz_platform
+      MYSQL_ROOT_PASSWORD: root
+      MYSQL_USER: quiz
+      MYSQL_PASSWORD: quiz
+    ports:
+      - "3306:3306"
+    healthcheck:
+      test: ["CMD", "mysqladmin", "ping", "-h", "localhost", "-uroot", "-proot"]
+      interval: 10s
+      timeout: 5s
+      retries: 8
+
+  app:
+    build: .
+    container_name: quiz-platform-app
+    depends_on:
+      db:
+        condition: service_healthy
+    environment:
+      SPRING_PROFILES_ACTIVE: prod
+      DB_URL: jdbc:mysql://db:3306/quiz_platform
+      DB_USERNAME: root
+      DB_PASSWORD: root
+      SERVER_PORT: 8080
+    ports:
+      - "8080:8080"

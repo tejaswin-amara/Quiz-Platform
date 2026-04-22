@@ -1,40 +1,62 @@
 package com.tejaswin.quizplatform.service;
 
 import com.tejaswin.quizplatform.dsa.DynamicProgrammingUtils;
-import com.tejaswin.quizplatform.dsa.MaxHeap;
 import com.tejaswin.quizplatform.dsa.QuestionBST;
-import com.tejaswin.quizplatform.dsa.SegmentTree;
 import com.tejaswin.quizplatform.dsa.TopicGraph;
 import com.tejaswin.quizplatform.model.LeaderboardEntry;
 import com.tejaswin.quizplatform.model.Question;
 import com.tejaswin.quizplatform.model.Quiz;
+import com.tejaswin.quizplatform.persistence.entity.QuestionEntity;
+import com.tejaswin.quizplatform.persistence.entity.QuizEntity;
+import com.tejaswin.quizplatform.persistence.entity.QuizResultEntity;
+import com.tejaswin.quizplatform.persistence.repository.QuestionRepository;
+import com.tejaswin.quizplatform.persistence.repository.QuizRepository;
+import com.tejaswin.quizplatform.persistence.repository.QuizResultRepository;
+import jakarta.annotation.PostConstruct;
 import org.springframework.stereotype.Service;
 
+import java.time.Instant;
 import java.util.ArrayList;
-import java.util.HashSet;
 import java.util.HashMap;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
-import java.util.Set;
 import java.util.UUID;
+import java.util.stream.Collectors;
 
 @Service
 public class QuizPlatformService {
     private static final int QUIZ_CODE_LENGTH = 6;
     private static final int POINTS_PER_DIFFICULTY_LEVEL = 10;
-    private static final int DEFAULT_QUESTION_DURATION_SECONDS = 15;
 
     private final QuestionBST questionBST = new QuestionBST();
     private final TopicGraph topicGraph = new TopicGraph();
+
     private final Map<Long, Question> allQuestions = new HashMap<>();
     private final Map<String, Quiz> quizzes = new HashMap<>();
     private final Map<String, Map<String, Integer>> quizScores = new HashMap<>();
     private final Map<String, Map<String, List<Integer>>> quizScoreHistory = new HashMap<>();
     private final Map<String, String> participantNames = new HashMap<>();
-    private final Map<String, LiveSession> sessions = new HashMap<>();
 
-    public QuizPlatformService() {
+    private final QuestionRepository questionRepository;
+    private final QuizRepository quizRepository;
+    private final QuizResultRepository quizResultRepository;
+    private final LeaderboardService leaderboardService;
+    private final AnalyticsService analyticsService;
+
+    public QuizPlatformService(
+            QuestionRepository questionRepository,
+            QuizRepository quizRepository,
+            QuizResultRepository quizResultRepository,
+            LeaderboardService leaderboardService,
+            AnalyticsService analyticsService
+    ) {
+        this.questionRepository = questionRepository;
+        this.quizRepository = quizRepository;
+        this.quizResultRepository = quizResultRepository;
+        this.leaderboardService = leaderboardService;
+        this.analyticsService = analyticsService;
+
         topicGraph.addEdge("Arrays", "Sliding Window");
         topicGraph.addEdge("Sliding Window", "Two Pointers");
         topicGraph.addEdge("Two Pointers", "Binary Search");
@@ -43,34 +65,75 @@ public class QuizPlatformService {
         topicGraph.addEdge("Topological Sort", "Shortest Path");
     }
 
-    public Question addQuestion(Question question) {
+    @PostConstruct
+    void loadPersistedData() {
+        for (QuestionEntity entity : questionRepository.findAll()) {
+            Question question = mapQuestion(entity);
+            allQuestions.put(question.id(), question);
+            questionBST.insert(question);
+            topicGraph.addTopic(question.topic());
+        }
+
+        for (QuizEntity entity : quizRepository.findAll()) {
+            Quiz quiz = new Quiz(entity.getCode(), entity.getTitle(), parseQuestionIds(entity.getQuestionIdsCsv()));
+            quizzes.put(quiz.code(), quiz);
+            quizScores.putIfAbsent(quiz.code(), new HashMap<>());
+            quizScoreHistory.putIfAbsent(quiz.code(), new HashMap<>());
+        }
+    }
+
+    public synchronized Question addQuestion(Question question) {
+        validateQuestion(question);
         allQuestions.put(question.id(), question);
         questionBST.insert(question);
         topicGraph.addTopic(question.topic());
+        questionRepository.save(mapEntity(question));
         return question;
     }
 
-    public Quiz createQuiz(String title, List<Long> questionIds) {
+    public synchronized Quiz createQuiz(String title, List<Long> questionIds) {
+        if (title == null || title.isBlank()) {
+            throw new IllegalArgumentException("Quiz title is required");
+        }
+        if (questionIds == null || questionIds.isEmpty()) {
+            throw new IllegalArgumentException("At least one question ID is required");
+        }
+
+        for (Long questionId : questionIds) {
+            if (questionId == null || questionBST.search(questionId) == null) {
+                throw new IllegalArgumentException("Question not found in BST: " + questionId);
+            }
+        }
+
         String code = generateQuizCode();
-        Quiz quiz = new Quiz(code, title, questionIds);
+        Quiz quiz = new Quiz(code, title.trim(), questionIds);
         quizzes.put(code, quiz);
         quizScores.put(code, new HashMap<>());
         quizScoreHistory.put(code, new HashMap<>());
+
+        QuizEntity entity = new QuizEntity();
+        entity.setCode(quiz.code());
+        entity.setTitle(quiz.title());
+        entity.setQuestionIdsCsv(toCsv(quiz.questionIds()));
+        quizRepository.save(entity);
+
         return quiz;
     }
 
-    public Map<String, String> joinQuiz(String code, String participantName) {
+    public synchronized Map<String, String> joinQuiz(String code, String participantName) {
         ensureQuizExists(code);
+        if (participantName == null || participantName.isBlank()) {
+            throw new IllegalArgumentException("Participant name is required");
+        }
+
         String participantId = UUID.randomUUID().toString();
-        participantNames.put(participantId, participantName);
+        participantNames.put(participantId, participantName.trim());
         quizScores.get(code).put(participantId, 0);
-        List<Integer> initialHistory = new ArrayList<>();
-        initialHistory.add(0);
-        quizScoreHistory.get(code).put(participantId, initialHistory);
+        quizScoreHistory.get(code).put(participantId, new ArrayList<>(List.of(0)));
         return Map.of("participantId", participantId, "quizCode", code);
     }
 
-    public List<Question> getQuizQuestions(String code) {
+    public synchronized List<Question> getQuizQuestions(String code) {
         Quiz quiz = ensureQuizExists(code);
         return quiz.questionIds().stream()
                 .map(questionBST::search)
@@ -78,59 +141,58 @@ public class QuizPlatformService {
                 .toList();
     }
 
-    public Map<String, Object> submitAnswers(String code, String participantId, Map<Long, Integer> answers) {
+    public synchronized Map<String, Object> submitAnswers(String code, String participantId, Map<Long, Integer> answers) {
         Quiz quiz = ensureQuizExists(code);
+        if (participantId == null || participantId.isBlank()) {
+            throw new IllegalArgumentException("participantId is required");
+        }
+        if (answers == null || answers.isEmpty()) {
+            throw new IllegalArgumentException("Answers payload cannot be empty");
+        }
         if (!quizScores.get(code).containsKey(participantId)) {
             throw new IllegalArgumentException("Participant has not joined this quiz");
         }
+
         int score = 0;
+        Map<Integer, Integer> difficultyImpact = new HashMap<>();
         for (Long questionId : quiz.questionIds()) {
             Question question = questionBST.search(questionId);
             Integer selectedOption = answers.get(questionId);
             if (question != null && selectedOption != null && selectedOption == question.correctOption()) {
-                score += question.difficulty() * POINTS_PER_DIFFICULTY_LEVEL;
+                int delta = question.difficulty() * POINTS_PER_DIFFICULTY_LEVEL;
+                score += delta;
+                difficultyImpact.merge(question.difficulty(), delta, Integer::sum);
             }
         }
+
         quizScores.get(code).put(participantId, score);
         quizScoreHistory.get(code).get(participantId).add(score);
 
-        return Map.of(
-                "participantId", participantId,
-                "score", score,
-                "complexity", "BST search O(h) per question"
-        );
-    }
-
-    public List<LeaderboardEntry> leaderboard(String code) {
-        ensureQuizExists(code);
-        MaxHeap heap = new MaxHeap();
-        for (Map.Entry<String, Integer> entry : quizScores.get(code).entrySet()) {
-            heap.insert(new LeaderboardEntry(entry.getKey(), participantNames.getOrDefault(entry.getKey(), "Unknown"), entry.getValue()));
-        }
-
-        List<LeaderboardEntry> ranked = new ArrayList<>();
-        while (!heap.isEmpty()) {
-            ranked.add(heap.extractMax());
-        }
-        return ranked;
-    }
-
-    public Map<String, Object> analytics(String code, int left, int right, String participantId) {
-        ensureQuizExists(code);
-        int[] scores = leaderboard(code).stream().mapToInt(LeaderboardEntry::score).toArray();
-        SegmentTree segmentTree = new SegmentTree(scores);
-        int rangeSum = segmentTree.rangeQuery(left, right);
-        List<Integer> history = quizScoreHistory.get(code).getOrDefault(participantId, List.of());
-        int lis = DynamicProgrammingUtils.longestIncreasingSubsequence(history);
+        QuizResultEntity resultEntity = new QuizResultEntity();
+        resultEntity.setQuizCode(code);
+        resultEntity.setParticipantId(participantId);
+        resultEntity.setParticipantName(participantNames.getOrDefault(participantId, "Unknown"));
+        resultEntity.setScore(score);
+        resultEntity.setSubmittedAt(Instant.now());
+        quizResultRepository.save(resultEntity);
 
         return new LinkedHashMap<>(Map.of(
-                "rangeScoreSum", rangeSum,
-                "lisPerformanceTrend", lis,
-                "complexity", Map.of(
-                        "segmentTreeQuery", "O(log n)",
-                        "lis", "O(n^2)"
-                )
+                "participantId", participantId,
+                "score", score,
+                "difficultyImpact", difficultyImpact,
+                "complexity", "BST search O(h) per question"
         ));
+    }
+
+    public synchronized List<LeaderboardEntry> leaderboard(String code) {
+        ensureQuizExists(code);
+        return leaderboardService.rank(quizScores.get(code), participantNames);
+    }
+
+    public synchronized Map<String, Object> analytics(String code, int left, int right, String participantId) {
+        ensureQuizExists(code);
+        List<Integer> history = quizScoreHistory.get(code).getOrDefault(participantId, List.of());
+        return analyticsService.quizAnalytics(leaderboard(code), history, left, right);
     }
 
     public List<String> recommendTopics(String topic, String mode) {
@@ -153,17 +215,22 @@ public class QuizPlatformService {
         return questionBST.inorderTraversal();
     }
 
-    public void deleteQuestion(long id) {
+    public synchronized void deleteQuestion(long id) {
         allQuestions.remove(id);
         questionBST.delete(id);
+        questionRepository.deleteById(id);
     }
 
-    private Quiz ensureQuizExists(String code) {
+    public synchronized Quiz ensureQuizExists(String code) {
         Quiz quiz = quizzes.get(code);
         if (quiz == null) {
             throw new IllegalArgumentException("Quiz not found: " + code);
         }
         return quiz;
+    }
+
+    public synchronized String resolveParticipantName(String participantId) {
+        return participantNames.getOrDefault(participantId, "Unknown");
     }
 
     private String generateQuizCode() {
@@ -178,7 +245,7 @@ public class QuizPlatformService {
         return code;
     }
 
-    public void seedQuestionsIfEmpty() {
+    public synchronized void seedQuestionsIfEmpty() {
         if (!allQuestions.isEmpty()) {
             return;
         }
@@ -199,212 +266,68 @@ public class QuizPlatformService {
         );
     }
 
-    public synchronized Map<String, Object> createSession(String title, List<Long> questionIds, Integer questionDurationSeconds) {
-        Quiz quiz = createQuiz(title, questionIds);
-        String sessionId = "S" + UUID.randomUUID().toString().replace("-", "").substring(0, 8).toUpperCase();
-        LiveSession session = new LiveSession(
-                sessionId,
-                quiz.code(),
-                Math.max(5, questionDurationSeconds == null ? DEFAULT_QUESTION_DURATION_SECONDS : questionDurationSeconds)
-        );
-        sessions.put(sessionId, session);
-        return Map.of(
-                "sessionId", sessionId,
-                "quizCode", quiz.code(),
-                "state", session.state
-        );
+    public Map<String, Object> dsaInsights() {
+        return new LinkedHashMap<>(Map.of(
+                "questionFlow", "BST retrieves each question by ID during quiz and live sessions (avg O(log n)).",
+                "leaderboardFlow", "Max Heap ranks participants on every leaderboard fetch (O(n log n)).",
+                "recommendationFlow", "Graph BFS/DFS/Topo powers topic progression and recommendations (O(V + E)).",
+                "optimizationFlow", "Knapsack DP selects best weighted question subset (O(n × W)).",
+                "analyticsFlow", "Segment Tree answers score range queries while LIS tracks trend over attempts."
+        ));
     }
 
-    public synchronized Map<String, Object> joinSession(String sessionId, String participantName) {
-        LiveSession session = ensureSessionExists(sessionId);
-        if (!"LOBBY".equals(session.state)) {
-            throw new IllegalStateException("Session already started");
+    private void validateQuestion(Question question) {
+        if (question == null) {
+            throw new IllegalArgumentException("Question payload is required");
         }
-        String participantId = UUID.randomUUID().toString();
-        participantNames.put(participantId, participantName);
-        session.participants.put(participantId, participantName);
-        session.scores.put(participantId, 0);
-        List<Integer> initialHistory = new ArrayList<>();
-        initialHistory.add(0);
-        session.scoreHistory.put(participantId, initialHistory);
-        return Map.of(
-                "sessionId", sessionId,
-                "participantId", participantId,
-                "participantName", participantName,
-                "state", session.state
-        );
+        if (question.text() == null || question.text().isBlank()) {
+            throw new IllegalArgumentException("Question text is required");
+        }
+        if (question.options() == null || question.options().size() < 2) {
+            throw new IllegalArgumentException("At least two options are required");
+        }
+        if (question.correctOption() < 0 || question.correctOption() >= question.options().size()) {
+            throw new IllegalArgumentException("correctOption is out of bounds");
+        }
     }
 
-    public synchronized Map<String, Object> getSessionQuestion(String sessionId, boolean start) {
-        LiveSession session = ensureSessionExists(sessionId);
-        if ("LOBBY".equals(session.state) && start) {
-            session.state = "LIVE";
-            session.startEpochMs = System.currentTimeMillis();
-        }
-        updateSessionState(session);
+    private QuestionEntity mapEntity(Question question) {
+        QuestionEntity entity = new QuestionEntity();
+        entity.setId(question.id());
+        entity.setText(question.text());
+        entity.setOptionsSerialized(String.join("|||", question.options()));
+        entity.setCorrectOption(question.correctOption());
+        entity.setTopic(question.topic());
+        entity.setDifficulty(question.difficulty());
+        entity.setWeight(question.weight());
+        return entity;
+    }
 
-        if (!"LIVE".equals(session.state)) {
-            return Map.of(
-                    "sessionId", sessionId,
-                    "state", session.state,
-                    "players", session.participants.values(),
-                    "playerCount", session.participants.size()
-            );
-        }
-
-        List<Question> questions = getQuizQuestions(session.quizCode);
-        int index = currentQuestionIndex(session);
-        Question question = questions.get(index);
-        int elapsedForQuestionSeconds = elapsedForQuestionSeconds(session);
-        int remainingSeconds = Math.max(0, session.questionDurationSeconds - elapsedForQuestionSeconds);
-
-        return Map.of(
-                "sessionId", sessionId,
-                "state", session.state,
-                "questionIndex", index,
-                "totalQuestions", questions.size(),
-                "remainingSeconds", remainingSeconds,
-                "question", Map.of(
-                        "id", question.id(),
-                        "text", question.text(),
-                        "options", question.options(),
-                        "topic", question.topic()
-                )
+    private Question mapQuestion(QuestionEntity entity) {
+        List<String> options = List.of(entity.getOptionsSerialized().split("\\|\\|\\|"));
+        return new Question(
+                entity.getId(),
+                entity.getText(),
+                options,
+                entity.getCorrectOption(),
+                entity.getTopic(),
+                entity.getDifficulty(),
+                entity.getWeight()
         );
     }
 
-    public synchronized Map<String, Object> submitSessionAnswer(String sessionId, String participantId, int answerOption) {
-        LiveSession session = ensureSessionExists(sessionId);
-        updateSessionState(session);
-        if (!"LIVE".equals(session.state)) {
-            throw new IllegalStateException("Session is not live");
-        }
-        if (!session.participants.containsKey(participantId)) {
-            throw new IllegalArgumentException("Participant has not joined this session");
-        }
-
-        int index = currentQuestionIndex(session);
-        String answerKey = participantId + ":" + index;
-        if (session.submittedAnswers.contains(answerKey)) {
-            return Map.of(
-                    "participantId", participantId,
-                    "questionIndex", index,
-                    "alreadySubmitted", true
-            );
-        }
-        session.submittedAnswers.add(answerKey);
-
-        List<Question> questions = getQuizQuestions(session.quizCode);
-        Question current = questions.get(index);
-        boolean isCorrect = answerOption == current.correctOption();
-
-        int existing = session.scores.getOrDefault(participantId, 0);
-        int updated = existing;
-        if (isCorrect) {
-            updated += current.difficulty() * POINTS_PER_DIFFICULTY_LEVEL;
-        }
-        session.scores.put(participantId, updated);
-        session.scoreHistory.get(participantId).add(updated);
-
-        return Map.of(
-                "participantId", participantId,
-                "questionId", current.id(),
-                "isCorrect", isCorrect,
-                "correctOption", current.correctOption(),
-                "score", updated
-        );
+    private String toCsv(List<Long> values) {
+        return values.stream().map(String::valueOf).collect(Collectors.joining(","));
     }
 
-    public synchronized List<LeaderboardEntry> sessionLeaderboard(String sessionId) {
-        LiveSession session = ensureSessionExists(sessionId);
-        return heapRankedLeaderboard(session.scores, session.participants);
-    }
-
-    public synchronized Map<String, Object> sessionResults(String sessionId) {
-        LiveSession session = ensureSessionExists(sessionId);
-        updateSessionState(session);
-        List<LeaderboardEntry> leaderboard = sessionLeaderboard(sessionId);
-        int[] scores = leaderboard.stream().mapToInt(LeaderboardEntry::score).toArray();
-        SegmentTree segmentTree = new SegmentTree(scores);
-        int totalScoreRange = segmentTree.rangeQuery(0, Math.max(0, scores.length - 1));
-
-        Map<String, Integer> lisByParticipant = new HashMap<>();
-        for (Map.Entry<String, List<Integer>> entry : session.scoreHistory.entrySet()) {
-            lisByParticipant.put(entry.getKey(), DynamicProgrammingUtils.longestIncreasingSubsequence(entry.getValue()));
+    private List<Long> parseQuestionIds(String csv) {
+        if (csv == null || csv.isBlank()) {
+            return List.of();
         }
-
-        return Map.of(
-                "sessionId", sessionId,
-                "state", session.state,
-                "leaderboard", leaderboard,
-                "totalScoreRange", totalScoreRange,
-                "lisPerformanceTrend", lisByParticipant,
-                "complexity", Map.of(
-                        "heapLeaderboard", "O(n log n)",
-                        "segmentTreeRange", "O(log n)",
-                        "lis", "O(n^2)"
-                )
-        );
-    }
-
-    private List<LeaderboardEntry> heapRankedLeaderboard(Map<String, Integer> scores, Map<String, String> names) {
-        MaxHeap heap = new MaxHeap();
-        for (Map.Entry<String, Integer> entry : scores.entrySet()) {
-            heap.insert(new LeaderboardEntry(entry.getKey(), names.getOrDefault(entry.getKey(), "Unknown"), entry.getValue()));
+        List<Long> ids = new ArrayList<>();
+        for (String token : csv.split(",")) {
+            ids.add(Long.parseLong(token.trim()));
         }
-        List<LeaderboardEntry> ranked = new ArrayList<>();
-        while (!heap.isEmpty()) {
-            ranked.add(heap.extractMax());
-        }
-        return ranked;
-    }
-
-    private void updateSessionState(LiveSession session) {
-        if (!"LIVE".equals(session.state)) {
-            return;
-        }
-        int totalQuestions = getQuizQuestions(session.quizCode).size();
-        int elapsedSeconds = (int) ((System.currentTimeMillis() - session.startEpochMs) / 1000L);
-        if (elapsedSeconds >= totalQuestions * session.questionDurationSeconds) {
-            session.state = "COMPLETED";
-        }
-    }
-
-    private int currentQuestionIndex(LiveSession session) {
-        int elapsedSeconds = (int) ((System.currentTimeMillis() - session.startEpochMs) / 1000L);
-        int index = elapsedSeconds / session.questionDurationSeconds;
-        int maxIndex = Math.max(0, getQuizQuestions(session.quizCode).size() - 1);
-        return Math.min(index, maxIndex);
-    }
-
-    private int elapsedForQuestionSeconds(LiveSession session) {
-        int elapsedSeconds = (int) ((System.currentTimeMillis() - session.startEpochMs) / 1000L);
-        return elapsedSeconds % session.questionDurationSeconds;
-    }
-
-    private LiveSession ensureSessionExists(String sessionId) {
-        LiveSession session = sessions.get(sessionId);
-        if (session == null) {
-            throw new IllegalArgumentException("Session not found: " + sessionId);
-        }
-        return session;
-    }
-
-    private static class LiveSession {
-        private final String sessionId;
-        private final String quizCode;
-        private final int questionDurationSeconds;
-        private final Map<String, String> participants = new HashMap<>();
-        private final Map<String, Integer> scores = new HashMap<>();
-        private final Map<String, List<Integer>> scoreHistory = new HashMap<>();
-        private final Set<String> submittedAnswers = new HashSet<>();
-        private String state = "LOBBY";
-        private long startEpochMs;
-
-        private LiveSession(String sessionId, String quizCode, int questionDurationSeconds) {
-            this.sessionId = sessionId;
-            this.quizCode = quizCode;
-            this.questionDurationSeconds = questionDurationSeconds;
-        }
+        return ids;
     }
 }

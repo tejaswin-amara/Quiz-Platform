@@ -3,7 +3,8 @@ package com.tejaswin.quizplatform.controller;
 import com.tejaswin.quizplatform.dto.CreateSessionRequest;
 import com.tejaswin.quizplatform.dto.JoinSessionRequest;
 import com.tejaswin.quizplatform.dto.SessionAnswerRequest;
-import com.tejaswin.quizplatform.service.QuizPlatformService;
+import com.tejaswin.quizplatform.service.SessionService;
+import jakarta.validation.Valid;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
@@ -15,23 +16,20 @@ import org.springframework.web.bind.annotation.RestController;
 @RestController
 @RequestMapping("/session")
 public class SessionController {
-    private final QuizPlatformService service;
+    private final SessionService sessionService;
 
-    public SessionController(QuizPlatformService service) {
-        this.service = service;
+    public SessionController(SessionService sessionService) {
+        this.sessionService = sessionService;
     }
 
     @PostMapping("/create")
-    public Object createSession(@RequestBody CreateSessionRequest request) {
-        return service.createSession(request.title(), request.questionIds(), request.questionDurationSeconds());
+    public Object createSession(@Valid @RequestBody CreateSessionRequest request) {
+        return sessionService.createSession(request.title(), request.questionIds(), request.questionDurationSeconds());
     }
 
     @PostMapping("/join")
-    public Object joinSession(
-            @RequestParam String sessionId,
-            @RequestBody JoinSessionRequest request
-    ) {
-        return service.joinSession(sessionId, request.participantName());
+    public Object joinSession(@Valid @RequestBody JoinSessionRequest request) {
+        return sessionService.joinSession(request.sessionId(), request.participantName());
     }
 
     @GetMapping("/{id}/question")
@@ -39,21 +37,21 @@ public class SessionController {
             @PathVariable("id") String sessionId,
             @RequestParam(defaultValue = "false") boolean start
     ) {
-        return service.getSessionQuestion(sessionId, start);
+        return sessionService.getSessionQuestion(sessionId, start);
     }
 
     @PostMapping("/{id}/answer")
-    public Object submitAnswer(@PathVariable("id") String sessionId, @RequestBody SessionAnswerRequest request) {
-        return service.submitSessionAnswer(sessionId, request.participantId(), request.answerOption());
+    public Object submitAnswer(@PathVariable("id") String sessionId, @Valid @RequestBody SessionAnswerRequest request) {
+        return sessionService.submitSessionAnswer(sessionId, request.participantId(), request.answerOption());
     }
 
     @GetMapping("/{id}/leaderboard")
     public Object leaderboard(@PathVariable("id") String sessionId) {
-        return service.sessionLeaderboard(sessionId);
+        return sessionService.sessionLeaderboard(sessionId);
     }
 
     @GetMapping("/{id}/results")
     public Object results(@PathVariable("id") String sessionId) {
-        return service.sessionResults(sessionId);
+        return sessionService.sessionResults(sessionId);
     }
 }

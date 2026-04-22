@@ -200,6 +200,24 @@ pre {
     border-color: #22d3ee;
 }
 
+.leaderboard li.top-1 {
+    border-color: #facc15;
+    box-shadow: 0 0 0 1px #facc15;
+}
+
+.leaderboard li.top-2 {
+    border-color: #cbd5e1;
+}
+
+.leaderboard li.top-3 {
+    border-color: #fb923c;
+}
+
+button:disabled {
+    opacity: 0.55;
+    cursor: not-allowed;
+}
+
 @media (max-width: 700px) {
     .actions {
         flex-direction: column;

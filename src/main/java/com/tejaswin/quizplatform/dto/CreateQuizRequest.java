@@ -1,6 +1,10 @@
 package com.tejaswin.quizplatform.dto;
 
+import jakarta.validation.constraints.NotBlank;
+import jakarta.validation.constraints.NotEmpty;
+import jakarta.validation.constraints.NotNull;
+
 import java.util.List;
 
-public record CreateQuizRequest(String title, List<Long> questionIds) {
+public record CreateQuizRequest(@NotBlank String title, @NotEmpty List<@NotNull Long> questionIds) {
 }

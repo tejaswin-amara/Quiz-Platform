@@ -1,4 +1,6 @@
 package com.tejaswin.quizplatform.dto;
 
-public record JoinQuizRequest(String participantName) {
+import jakarta.validation.constraints.NotBlank;
+
+public record JoinQuizRequest(@NotBlank String participantName) {
 }

@@ -37,6 +37,11 @@
                     <pre id="complexity-output">Click refresh to load...</pre>
                     <button class="small" onclick="loadComplexities()">Refresh complexity map</button>
                 </article>
+                <article>
+                    <h3>DSA Insights Panel</h3>
+                    <pre id="insights-output">Click refresh to load...</pre>
+                    <button class="small" onclick="loadDsaInsights()">Refresh DSA insights</button>
+                </article>
             </div>
         </section>
 
@@ -83,6 +88,7 @@
             <h3 id="live-question">Loading question...</h3>
             <div id="live-options" class="options"></div>
             <p id="answer-status" class="status"></p>
+            <p id="live-loading" class="muted"></p>
             <div class="actions">
                 <button class="small" onclick="manualLeaderboardRefresh()">Refresh Leaderboard</button>
             </div>
@@ -93,8 +99,12 @@
             <h2>Session Results</h2>
             <p>Session: <strong id="result-session"></strong></p>
             <p>Total Score Range (Segment Tree): <strong id="result-range">0</strong></p>
+            <p>Average Score: <strong id="result-average">0</strong></p>
+            <p>Your Rank: <strong id="result-rank">N/A</strong></p>
             <h3>Final Leaderboard</h3>
             <ol id="result-leaderboard" class="leaderboard"></ol>
+            <h3>Difficulty Impact</h3>
+            <pre id="result-difficulty"></pre>
             <h3>Performance Trend (LIS)</h3>
             <pre id="result-lis"></pre>
             <div class="actions">

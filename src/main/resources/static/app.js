@@ -18,8 +18,15 @@ async function api(url, options = {}) {
     ...options,
   });
   if (!response.ok) {
-    const message = await response.text();
-    throw new Error(message || "Request failed");
+    let message = "Request failed";
+    try {
+      const errorJson = await response.json();
+      message = errorJson.message || message;
+    } catch {
+      const text = await response.text();
+      message = text || message;
+    }
+    throw new Error(message);
   }
   return response.json();
 }
@@ -60,16 +67,24 @@ async function loadComplexities() {
   document.getElementById("complexity-output").textContent = JSON.stringify(data, null, 2);
 }
 
+async function loadDsaInsights() {
+  const data = await api("/dsa/insights");
+  document.getElementById("insights-output").textContent = JSON.stringify(data, null, 2);
+}
+
 async function createSession() {
   try {
     const title = document.getElementById("create-title").value.trim();
     const questionIds = parseQuestionIds(document.getElementById("create-questions").value);
     const questionDurationSeconds = Number(document.getElementById("create-duration").value || "12");
 
+    const createButton = document.querySelector("#screen-create button");
+    createButton.disabled = true;
     const created = await api("/session/create", {
       method: "POST",
       body: JSON.stringify({ title, questionIds, questionDurationSeconds }),
     });
+    createButton.disabled = false;
 
     state.role = "host";
     state.isHost = true;
@@ -88,6 +103,8 @@ async function createSession() {
     startPolling();
     await loadSessionState();
   } catch (error) {
+    const createButton = document.querySelector("#screen-create button");
+    if (createButton) createButton.disabled = false;
     showStatus("create-message", error.message, true);
   }
 }
@@ -96,10 +113,13 @@ async function joinSession() {
   try {
     const sessionId = document.getElementById("join-session-id").value.trim();
     const participantName = document.getElementById("join-name").value.trim();
-    const joined = await api(`/session/join?sessionId=${encodeURIComponent(sessionId)}`, {
+    const joinButton = document.querySelector("#screen-join button");
+    joinButton.disabled = true;
+    const joined = await api(`/session/join`, {
       method: "POST",
-      body: JSON.stringify({ participantName }),
+      body: JSON.stringify({ sessionId, participantName }),
     });
+    joinButton.disabled = false;
 
     state.role = "player";
     state.isHost = false;
@@ -117,6 +137,8 @@ async function joinSession() {
     startPolling();
     await loadSessionState();
   } catch (error) {
+    const joinButton = document.querySelector("#screen-join button");
+    if (joinButton) joinButton.disabled = false;
     showStatus("join-message", error.message, true);
   }
 }
@@ -181,6 +203,9 @@ function renderLeaderboard(entries) {
   entries.forEach((entry, index) => {
     const li = document.createElement("li");
     li.textContent = `#${index + 1} ${entry.participantName} — ${entry.score}`;
+    if (index === 0) li.classList.add("top-1");
+    if (index === 1) li.classList.add("top-2");
+    if (index === 2) li.classList.add("top-3");
     if (state.lastLeaderboardSignature && state.lastLeaderboardSignature !== signature) {
       li.classList.add("bump");
       setTimeout(() => li.classList.remove("bump"), 260);
@@ -192,8 +217,13 @@ function renderLeaderboard(entries) {
 }
 
 async function manualLeaderboardRefresh() {
-  const data = await api(`/session/${encodeURIComponent(state.sessionId)}/leaderboard`);
-  renderLeaderboard(data);
+  try {
+    document.getElementById("live-loading").textContent = "Updating leaderboard...";
+    const data = await api(`/session/${encodeURIComponent(state.sessionId)}/leaderboard`);
+    renderLeaderboard(data);
+  } finally {
+    document.getElementById("live-loading").textContent = "";
+  }
 }
 
 async function submitAnswer(answerOption, clickedButton) {
@@ -226,15 +256,25 @@ async function loadResults() {
   const data = await api(`/session/${encodeURIComponent(state.sessionId)}/results`);
   document.getElementById("result-session").textContent = state.sessionId;
   document.getElementById("result-range").textContent = String(data.totalScoreRange);
+  document.getElementById("result-average").textContent = Number(data.averageScore || 0).toFixed(2);
+  document.getElementById("result-difficulty").textContent = JSON.stringify(data.difficultyImpact || {}, null, 2);
   document.getElementById("result-lis").textContent = JSON.stringify(data.lisPerformanceTrend, null, 2);
 
   const list = document.getElementById("result-leaderboard");
   list.innerHTML = "";
+  let rank = "N/A";
   data.leaderboard.forEach((entry, idx) => {
     const li = document.createElement("li");
     li.textContent = `#${idx + 1} ${entry.participantName} — ${entry.score}`;
+    if (idx === 0) li.classList.add("top-1");
+    if (idx === 1) li.classList.add("top-2");
+    if (idx === 2) li.classList.add("top-3");
+    if (entry.participantId === state.participantId) {
+      rank = `#${idx + 1}`;
+    }
     list.appendChild(li);
   });
+  document.getElementById("result-rank").textContent = rank;
 
   showScreen("results");
 }
@@ -245,6 +285,7 @@ async function loadSessionState() {
   }
 
   try {
+    document.getElementById("live-loading").textContent = "Syncing live session...";
     const data = await api(`/session/${encodeURIComponent(state.sessionId)}/question`);
 
     if (data.state === "LOBBY") {
@@ -270,8 +311,11 @@ async function loadSessionState() {
     }
   } catch (error) {
     showStatus("answer-status", error.message, true);
+  } finally {
+    document.getElementById("live-loading").textContent = "";
   }
 }
 
 loadComplexities();
+loadDsaInsights();
 showScreen("home");
