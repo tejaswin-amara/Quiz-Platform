@@ -151,9 +151,16 @@ mvn test
 
 ## 11) Deploy with Docker
 
+### Reliable build flow (avoids Maven TLS issues inside Docker)
+```bash
+mvn -DskipTests package
+docker build -t quiz-platform .
+```
+
 ### Build and run with compose
 ```bash
 cp .env.example .env
+mvn -DskipTests package
 docker compose up --build
 ```
 
@@ -163,7 +170,6 @@ This starts:
 
 ### Direct container run
 ```bash
-docker build -t quiz-platform .
 docker run -p 8080:8080 \
   -e SPRING_PROFILES_ACTIVE=prod \
   -e DB_URL=jdbc:mysql://<host>:3306/quiz_platform \
@@ -172,6 +178,11 @@ docker run -p 8080:8080 \
   -e SERVER_PORT=8080 \
   quiz-platform
 ```
+
+### Fallback (if Docker build env has PKIX/TLS Maven errors)
+1. Build JAR on host: `mvn -DskipTests package`
+2. Build runtime image from local artifact: `docker build -t quiz-platform .`
+3. Run container with env vars as shown above.
 
 ## 12) 🎥 Demo Mode (1-click)
 
@@ -207,3 +218,19 @@ Live UI screenshot sample:
 - Clear, demonstrable DSA-to-feature mapping for viva.
 - End-to-end live quiz flow with demo mode for instant presentation.
 - Deployable with Docker and environment-driven configuration.
+
+## 16) ⏱️ How to demo in 1 minute
+
+1. Open home screen and click **Start Demo Quiz**.
+2. Show auto-created session + prejoined mock players in lobby.
+3. Click **Start Quiz** and show live question + timer.
+4. Submit one answer and show leaderboard update.
+5. Open results and highlight DSA insights + Thank You screen.
+
+## 17) 🎤 Viva quick explanation (short)
+
+- We built a full-stack quiz platform with persistent live sessions.
+- Demo Mode enables one-click setup for smooth presentation.
+- BST handles fast question retrieval, Heap ranks leaderboard, Graph powers recommendations.
+- DP is used for optimization and trend logic, Segment Tree for analytics range queries.
+- The system is test-backed, Dockerized, and deployable with env-based configuration.
