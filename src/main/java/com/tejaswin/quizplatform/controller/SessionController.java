@@ -5,6 +5,8 @@ import com.tejaswin.quizplatform.dto.JoinSessionRequest;
 import com.tejaswin.quizplatform.dto.SessionAnswerRequest;
 import com.tejaswin.quizplatform.service.SessionService;
 import jakarta.validation.Valid;
+import jakarta.validation.constraints.Pattern;
+import org.springframework.validation.annotation.Validated;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
@@ -14,6 +16,7 @@ import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
 @RestController
+@Validated
 @RequestMapping("/session")
 public class SessionController {
     private final SessionService sessionService;
@@ -34,24 +37,31 @@ public class SessionController {
 
     @GetMapping("/{id}/question")
     public Object currentQuestion(
-            @PathVariable("id") String sessionId,
+            @PathVariable("id") @Pattern(regexp = "^S[A-Z0-9]{8}$", message = "sessionId format is invalid") String sessionId,
             @RequestParam(defaultValue = "false") boolean start
     ) {
         return sessionService.getSessionQuestion(sessionId, start);
     }
 
     @PostMapping("/{id}/answer")
-    public Object submitAnswer(@PathVariable("id") String sessionId, @Valid @RequestBody SessionAnswerRequest request) {
+    public Object submitAnswer(
+            @PathVariable("id") @Pattern(regexp = "^S[A-Z0-9]{8}$", message = "sessionId format is invalid") String sessionId,
+            @Valid @RequestBody SessionAnswerRequest request
+    ) {
         return sessionService.submitSessionAnswer(sessionId, request.participantId(), request.answerOption());
     }
 
     @GetMapping("/{id}/leaderboard")
-    public Object leaderboard(@PathVariable("id") String sessionId) {
+    public Object leaderboard(
+            @PathVariable("id") @Pattern(regexp = "^S[A-Z0-9]{8}$", message = "sessionId format is invalid") String sessionId
+    ) {
         return sessionService.sessionLeaderboard(sessionId);
     }
 
     @GetMapping("/{id}/results")
-    public Object results(@PathVariable("id") String sessionId) {
+    public Object results(
+            @PathVariable("id") @Pattern(regexp = "^S[A-Z0-9]{8}$", message = "sessionId format is invalid") String sessionId
+    ) {
         return sessionService.sessionResults(sessionId);
     }
 }

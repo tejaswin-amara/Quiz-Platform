@@ -1,5 +1,6 @@
 package com.tejaswin.quizplatform.controller;
 
+import com.tejaswin.quizplatform.exception.NotFoundException;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.MethodArgumentNotValidException;
@@ -18,8 +19,13 @@ public class ApiExceptionHandler {
     }
 
     @ExceptionHandler(IllegalStateException.class)
-    public ResponseEntity<Map<String, Object>> handleConflict(IllegalStateException exception) {
-        return error(HttpStatus.CONFLICT, exception.getMessage());
+    public ResponseEntity<Map<String, Object>> handleState(IllegalStateException exception) {
+        return error(HttpStatus.BAD_REQUEST, exception.getMessage());
+    }
+
+    @ExceptionHandler(NotFoundException.class)
+    public ResponseEntity<Map<String, Object>> handleNotFound(NotFoundException exception) {
+        return error(HttpStatus.NOT_FOUND, exception.getMessage());
     }
 
     @ExceptionHandler(MethodArgumentNotValidException.class)
