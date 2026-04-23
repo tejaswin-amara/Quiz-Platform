@@ -16,6 +16,9 @@ const state = {
 };
 
 const screens = ["home", "create", "join", "lobby", "live", "results", "thanks"];
+const LOBBY_POLL_INTERVAL_MS = 3000;
+const LIVE_POLL_INTERVAL_MS = 2000;
+const LEADERBOARD_POLL_INTERVAL_MS = 1500;
 
 async function api(url, options = {}) {
   const response = await fetch(url, {
@@ -62,7 +65,7 @@ function stopPolling() {
 }
 
 function startSessionPolling(mode) {
-  const interval = mode === "LIVE" ? 2000 : 3000;
+  const interval = mode === "LIVE" ? LIVE_POLL_INTERVAL_MS : LOBBY_POLL_INTERVAL_MS;
   if (state.sessionPollHandle && state.pollMode === mode) {
     return;
   }
@@ -75,7 +78,7 @@ function startSessionPolling(mode) {
 
 function startLeaderboardPolling() {
   if (state.leaderboardPollHandle) return;
-  state.leaderboardPollHandle = setInterval(() => manualLeaderboardRefresh(false), 1500);
+  state.leaderboardPollHandle = setInterval(() => manualLeaderboardRefresh(false), LEADERBOARD_POLL_INTERVAL_MS);
 }
 
 function stopLeaderboardPolling() {
