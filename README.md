@@ -80,11 +80,29 @@ Production-hardened Spring Boot quiz platform with a live session enhancement la
 - Default profile: **H2 file DB** (no setup)
 - Production profile: **MySQL** via `application-prod.properties`
 - Persisted entities:
-  - Questions
-  - Quizzes
-  - Quiz submission results
+  - Session
+  - Player
+  - Question
+  - Result
+  - Quiz / quiz submission results (core flow compatibility)
 
-## 6) Validation, Errors, and Logging
+## 6) API Usage Examples
+
+```bash
+# Create live session
+curl -X POST http://localhost:8080/session/create \
+  -H "Content-Type: application/json" \
+  -d '{"title":"DSA Live","questionIds":[101,102],"questionDurationSeconds":12}'
+
+# Join live session
+curl -X POST http://localhost:8080/session/join \
+  -H "Content-Type: application/json" \
+  -d '{"sessionId":"S1234ABCD","participantName":"Alice"}'
+
+# Fetch DSA insights panel data
+curl http://localhost:8080/dsa/insights
+```
+## 7) Validation, Errors, and Logging
 
 - Request validation with Jakarta Bean Validation
 - Centralized error handling via `@RestControllerAdvice`
@@ -94,7 +112,7 @@ Production-hardened Spring Boot quiz platform with a live session enhancement la
   - leaderboard refresh
   - session cleanup
 
-## 7) Frontend Features
+## 8) Frontend Features
 
 - Multi-screen flow (Home, Create, Join, Lobby, Live, Results)
 - Loading indicators and better error messages
@@ -102,7 +120,7 @@ Production-hardened Spring Boot quiz platform with a live session enhancement la
 - Result stats: average score, rank, difficulty impact, LIS trends
 - DSA Insights panel for viva explanation
 
-## 8) Run Locally
+## 9) Run Locally
 
 ### Prerequisites
 - Java 17+
@@ -117,13 +135,13 @@ Open:
 - `http://localhost:8080`
 - `http://localhost:8080/h2-console` (default local profile)
 
-## 9) Run Tests
+## 10) Run Tests
 
 ```bash
 mvn test
 ```
 
-## 10) Deploy with Docker
+## 11) Deploy with Docker
 
 ### Build and run with compose
 ```bash
@@ -145,7 +163,7 @@ docker run -p 8080:8080 \
   quiz-platform
 ```
 
-## 11) Viva Notes (quick explanation)
+## 12) Viva Notes (quick explanation)
 
 - **BST** is used for question retrieval so lookups scale with tree height (`O(h)`).
 - **Heap** powers rank extraction so leaderboard is always sorted by score.
@@ -153,7 +171,7 @@ docker run -p 8080:8080 \
 - **Knapsack DP** demonstrates optimization, and **LIS DP** demonstrates trend analysis.
 - **Segment Tree** provides efficient score range aggregation for analytics.
 
-## 12) Screenshot
+## 13) Screenshot
 
 Live UI screenshot:
 - https://github.com/user-attachments/assets/6bead3e0-a69e-47c9-9c72-ee1da0bab0b2

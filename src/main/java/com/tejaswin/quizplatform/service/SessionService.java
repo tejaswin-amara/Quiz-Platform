@@ -1,32 +1,41 @@
 package com.tejaswin.quizplatform.service;
 
+import com.tejaswin.quizplatform.exception.NotFoundException;
 import com.tejaswin.quizplatform.model.LeaderboardEntry;
 import com.tejaswin.quizplatform.model.Question;
 import com.tejaswin.quizplatform.model.Quiz;
+import com.tejaswin.quizplatform.persistence.entity.PlayerEntity;
+import com.tejaswin.quizplatform.persistence.entity.ResultEntity;
+import com.tejaswin.quizplatform.persistence.entity.SessionEntity;
+import com.tejaswin.quizplatform.persistence.repository.PlayerRepository;
+import com.tejaswin.quizplatform.persistence.repository.ResultRepository;
+import com.tejaswin.quizplatform.persistence.repository.SessionRepository;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Service;
 
+import java.time.Instant;
 import java.util.ArrayList;
 import java.util.HashMap;
-import java.util.HashSet;
+import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
-import java.util.Set;
 import java.util.UUID;
+import java.util.stream.Collectors;
 
 @Service
 public class SessionService {
     private static final Logger log = LoggerFactory.getLogger(SessionService.class);
     private static final int POINTS_PER_DIFFICULTY_LEVEL = 10;
 
-    private final Map<String, LiveSession> sessions = new HashMap<>();
-
     private final QuizPlatformService quizPlatformService;
     private final LeaderboardService leaderboardService;
     private final AnalyticsService analyticsService;
+    private final SessionRepository sessionRepository;
+    private final PlayerRepository playerRepository;
+    private final ResultRepository resultRepository;
     private final int defaultQuestionDurationSeconds;
     private final int expiryMinutes;
 
@@ -34,12 +43,18 @@ public class SessionService {
             QuizPlatformService quizPlatformService,
             LeaderboardService leaderboardService,
             AnalyticsService analyticsService,
+            SessionRepository sessionRepository,
+            PlayerRepository playerRepository,
+            ResultRepository resultRepository,
             @Value("${quiz.session.default-question-duration-seconds:15}") int defaultQuestionDurationSeconds,
             @Value("${quiz.session.expiry-minutes:45}") int expiryMinutes
     ) {
         this.quizPlatformService = quizPlatformService;
         this.leaderboardService = leaderboardService;
         this.analyticsService = analyticsService;
+        this.sessionRepository = sessionRepository;
+        this.playerRepository = playerRepository;
+        this.resultRepository = resultRepository;
         this.defaultQuestionDurationSeconds = defaultQuestionDurationSeconds;
         this.expiryMinutes = expiryMinutes;
     }
@@ -47,75 +62,86 @@ public class SessionService {
     public synchronized Map<String, Object> createSession(String title, List<Long> questionIds, Integer questionDurationSeconds) {
         Quiz quiz = quizPlatformService.createQuiz(title, questionIds);
         String sessionId = "S" + UUID.randomUUID().toString().replace("-", "").substring(0, 8).toUpperCase();
-        LiveSession session = new LiveSession(
-                sessionId,
-                quiz.code(),
-                Math.max(5, questionDurationSeconds == null ? defaultQuestionDurationSeconds : questionDurationSeconds)
-        );
-        sessions.put(sessionId, session);
 
-        log.info("event=session_created sessionId={} quizCode={} durationSec={}", sessionId, quiz.code(), session.questionDurationSeconds);
+        SessionEntity session = new SessionEntity();
+        session.setSessionId(sessionId);
+        session.setQuizCode(quiz.code());
+        session.setState("LOBBY");
+        session.setQuestionDurationSeconds(Math.max(5, questionDurationSeconds == null ? defaultQuestionDurationSeconds : questionDurationSeconds));
+        session.setStartEpochMs(null);
+        session.setLastActivityEpochMs(System.currentTimeMillis());
+        sessionRepository.save(session);
+
+        log.info("event=session_created sessionId={} quizCode={} durationSec={}", sessionId, quiz.code(), session.getQuestionDurationSeconds());
 
         return Map.of(
                 "sessionId", sessionId,
                 "quizCode", quiz.code(),
-                "state", session.state
+                "state", session.getState()
         );
     }
 
     public synchronized Map<String, Object> joinSession(String sessionId, String participantName) {
-        LiveSession session = ensureSessionExists(sessionId);
-        if (!"LOBBY".equals(session.state)) {
+        SessionEntity session = ensureSessionExists(sessionId);
+        if (!"LOBBY".equals(session.getState())) {
             throw new IllegalStateException("Session already started");
         }
         if (participantName == null || participantName.isBlank()) {
             throw new IllegalArgumentException("participantName is required");
         }
         String normalizedName = participantName.trim();
-        boolean alreadyJoined = session.participants.values().stream().anyMatch(existing -> existing.equalsIgnoreCase(normalizedName));
-        if (alreadyJoined) {
+        if (playerRepository.existsBySessionIdAndParticipantNameIgnoreCase(sessionId, normalizedName)) {
             throw new IllegalArgumentException("Participant with this name already joined");
         }
 
         String participantId = UUID.randomUUID().toString();
-        session.participants.put(participantId, normalizedName);
-        session.scores.put(participantId, 0);
-        session.scoreHistory.put(participantId, new ArrayList<>(List.of(0)));
-        session.touch();
+        PlayerEntity player = new PlayerEntity();
+        player.setParticipantId(participantId);
+        player.setSessionId(sessionId);
+        player.setParticipantName(normalizedName);
+        player.setScore(0);
+        player.setScoreHistoryCsv("0");
+        playerRepository.save(player);
 
+        touchSession(session);
         log.info("event=session_joined sessionId={} participantId={} participantName={}", sessionId, participantId, normalizedName);
 
         return Map.of(
                 "sessionId", sessionId,
                 "participantId", participantId,
                 "participantName", normalizedName,
-                "state", session.state
+                "state", session.getState()
         );
     }
 
     public synchronized Map<String, Object> getSessionQuestion(String sessionId, boolean start) {
-        LiveSession session = ensureSessionExists(sessionId);
-        if ("LOBBY".equals(session.state) && start) {
-            if (session.participants.isEmpty()) {
+        SessionEntity session = ensureSessionExists(sessionId);
+        if ("LOBBY".equals(session.getState()) && start) {
+            if (playerRepository.countBySessionId(sessionId) == 0) {
                 throw new IllegalStateException("Cannot start without participants");
             }
-            session.state = "LIVE";
-            session.startEpochMs = System.currentTimeMillis();
-            log.info("event=session_started sessionId={} participants={}", sessionId, session.participants.size());
+            session.setState("LIVE");
+            session.setStartEpochMs(System.currentTimeMillis());
+            sessionRepository.save(session);
+            log.info("event=session_started sessionId={} participants={}", sessionId, playerRepository.countBySessionId(sessionId));
         }
-        updateSessionState(session);
-        session.touch();
 
-        if (!"LIVE".equals(session.state)) {
+        updateSessionState(session);
+        touchSession(session);
+
+        if (!"LIVE".equals(session.getState())) {
+            List<String> players = playerRepository.findBySessionId(sessionId).stream()
+                    .map(PlayerEntity::getParticipantName)
+                    .toList();
             return Map.of(
                     "sessionId", sessionId,
-                    "state", session.state,
-                    "players", session.participants.values(),
-                    "playerCount", session.participants.size()
+                    "state", session.getState(),
+                    "players", players,
+                    "playerCount", players.size()
             );
         }
 
-        List<Question> questions = quizPlatformService.getQuizQuestions(session.quizCode);
+        List<Question> questions = quizPlatformService.getQuizQuestions(session.getQuizCode());
         if (questions.isEmpty()) {
             throw new IllegalStateException("Session has no valid questions");
         }
@@ -123,11 +149,11 @@ public class SessionService {
         int index = currentQuestionIndex(session, questions.size());
         Question question = questions.get(index);
         int elapsedForQuestionSeconds = elapsedForQuestionSeconds(session);
-        int remainingSeconds = Math.max(0, session.questionDurationSeconds - elapsedForQuestionSeconds);
+        int remainingSeconds = Math.max(0, session.getQuestionDurationSeconds() - elapsedForQuestionSeconds);
 
         return Map.of(
                 "sessionId", sessionId,
-                "state", session.state,
+                "state", session.getState(),
                 "questionIndex", index,
                 "totalQuestions", questions.size(),
                 "remainingSeconds", remainingSeconds,
@@ -144,19 +170,18 @@ public class SessionService {
         if (participantId == null || participantId.isBlank()) {
             throw new IllegalArgumentException("participantId is required");
         }
-        LiveSession session = ensureSessionExists(sessionId);
+        SessionEntity session = ensureSessionExists(sessionId);
         updateSessionState(session);
-        if (!"LIVE".equals(session.state)) {
+        if (!"LIVE".equals(session.getState())) {
             throw new IllegalStateException("Session is not live");
         }
-        if (!session.participants.containsKey(participantId)) {
-            throw new IllegalArgumentException("Participant has not joined this session");
-        }
 
-        List<Question> questions = quizPlatformService.getQuizQuestions(session.quizCode);
+        PlayerEntity player = playerRepository.findByParticipantIdAndSessionId(participantId, sessionId)
+                .orElseThrow(() -> new IllegalArgumentException("Participant has not joined this session"));
+
+        List<Question> questions = quizPlatformService.getQuizQuestions(session.getQuizCode());
         int index = currentQuestionIndex(session, questions.size());
-        String answerKey = participantId + ":" + index;
-        if (session.submittedAnswers.contains(answerKey)) {
+        if (resultRepository.existsBySessionIdAndParticipantIdAndQuestionIndex(sessionId, participantId, index)) {
             return Map.of(
                     "participantId", participantId,
                     "questionIndex", index,
@@ -169,18 +194,29 @@ public class SessionService {
             throw new IllegalArgumentException("answerOption out of bounds");
         }
 
-        session.submittedAnswers.add(answerKey);
         boolean isCorrect = answerOption == current.correctOption();
-
-        int existing = session.scores.getOrDefault(participantId, 0);
-        int updated = existing;
+        int updated = player.getScore();
         if (isCorrect) {
             updated += current.difficulty() * POINTS_PER_DIFFICULTY_LEVEL;
         }
-        session.scores.put(participantId, updated);
-        session.scoreHistory.get(participantId).add(updated);
-        session.touch();
+        player.setScore(updated);
 
+        List<Integer> history = parseHistory(player.getScoreHistoryCsv());
+        history.add(updated);
+        player.setScoreHistoryCsv(toHistoryCsv(history));
+        playerRepository.save(player);
+
+        ResultEntity result = new ResultEntity();
+        result.setSessionId(sessionId);
+        result.setParticipantId(participantId);
+        result.setQuestionIndex(index);
+        result.setQuestionId(current.id());
+        result.setCorrect(isCorrect);
+        result.setScoreAfterAnswer(updated);
+        result.setSubmittedAt(Instant.now());
+        resultRepository.save(result);
+
+        touchSession(session);
         log.info(
                 "event=session_answer_submitted sessionId={} participantId={} questionId={} correct={} score={}",
                 sessionId,
@@ -200,119 +236,144 @@ public class SessionService {
     }
 
     public synchronized List<LeaderboardEntry> sessionLeaderboard(String sessionId) {
-        LiveSession session = ensureSessionExists(sessionId);
-        session.touch();
-        List<LeaderboardEntry> ranked = leaderboardService.rank(session.scores, session.participants);
+        SessionEntity session = ensureSessionExists(sessionId);
+        touchSession(session);
+
+        List<PlayerEntity> players = playerRepository.findBySessionId(sessionId);
+        Map<String, Integer> scores = new HashMap<>();
+        Map<String, String> names = new HashMap<>();
+        for (PlayerEntity player : players) {
+            scores.put(player.getParticipantId(), player.getScore());
+            names.put(player.getParticipantId(), player.getParticipantName());
+        }
+
+        List<LeaderboardEntry> ranked = leaderboardService.rank(scores, names);
         log.info("event=session_leaderboard_updated sessionId={} leaderboardSize={}", sessionId, ranked.size());
         return ranked;
     }
 
     public synchronized Map<String, Object> sessionResults(String sessionId) {
-        LiveSession session = ensureSessionExists(sessionId);
+        SessionEntity session = ensureSessionExists(sessionId);
         updateSessionState(session);
-        session.touch();
+        touchSession(session);
 
         List<LeaderboardEntry> leaderboard = sessionLeaderboard(sessionId);
         int totalScoreRange = analyticsService.totalScoreRange(leaderboard);
 
         Map<String, Integer> lisByParticipant = new HashMap<>();
+        Map<String, Integer> rankByParticipant = new HashMap<>();
+
         int totalScore = 0;
-        for (LeaderboardEntry entry : leaderboard) {
+        for (int i = 0; i < leaderboard.size(); i++) {
+            LeaderboardEntry entry = leaderboard.get(i);
             totalScore += entry.score();
+            rankByParticipant.put(entry.participantId(), i + 1);
         }
         double averageScore = leaderboard.isEmpty() ? 0.0 : (double) totalScore / leaderboard.size();
 
-        for (Map.Entry<String, List<Integer>> entry : session.scoreHistory.entrySet()) {
-            lisByParticipant.put(entry.getKey(), analyticsService.lisTrend(entry.getValue()));
+        for (PlayerEntity player : playerRepository.findBySessionId(sessionId)) {
+            lisByParticipant.put(player.getParticipantId(), analyticsService.lisTrend(parseHistory(player.getScoreHistoryCsv())));
         }
 
-        Map<Integer, Integer> difficultyImpact = new HashMap<>();
-        List<Question> sessionQuestions = quizPlatformService.getQuizQuestions(session.quizCode);
-        for (Question question : sessionQuestions) {
-            difficultyImpact.merge(question.difficulty(), question.difficulty() * POINTS_PER_DIFFICULTY_LEVEL, Integer::sum);
+        Map<Long, Question> questionById = quizPlatformService.getQuizQuestions(session.getQuizCode()).stream()
+                .collect(Collectors.toMap(Question::id, question -> question));
+        Map<Integer, Integer> difficultyBreakdown = new HashMap<>();
+        for (ResultEntity result : resultRepository.findBySessionId(sessionId)) {
+            if (Boolean.TRUE.equals(result.getCorrect())) {
+                Question question = questionById.get(result.getQuestionId());
+                if (question != null) {
+                    int delta = question.difficulty() * POINTS_PER_DIFFICULTY_LEVEL;
+                    difficultyBreakdown.merge(question.difficulty(), delta, Integer::sum);
+                }
+            }
         }
 
-        return Map.of(
+        return new LinkedHashMap<>(Map.of(
                 "sessionId", sessionId,
-                "state", session.state,
+                "state", session.getState(),
                 "leaderboard", leaderboard,
                 "totalScoreRange", totalScoreRange,
                 "averageScore", averageScore,
-                "difficultyImpact", difficultyImpact,
+                "difficultyImpact", difficultyBreakdown,
+                "difficultyScoreBreakdown", difficultyBreakdown,
                 "lisPerformanceTrend", lisByParticipant,
+                "rankByParticipant", rankByParticipant,
                 "complexity", Map.of(
                         "heapLeaderboard", "O(n log n)",
                         "segmentTreeRange", "O(log n)",
                         "lis", "O(n^2)"
                 )
-        );
+        ));
     }
 
     @Scheduled(fixedDelayString = "${quiz.session.cleanup-interval-ms:60000}")
     public synchronized void cleanupExpiredSessions() {
         long now = System.currentTimeMillis();
         long expiryMillis = expiryMinutes * 60_000L;
-        int before = sessions.size();
-        sessions.entrySet().removeIf(entry -> now - entry.getValue().lastActivityEpochMs > expiryMillis);
-        int removed = before - sessions.size();
-        if (removed > 0) {
-            log.info("event=session_cleanup removed={} remaining={}", removed, sessions.size());
+        List<SessionEntity> expired = sessionRepository.findByLastActivityEpochMsLessThan(now - expiryMillis);
+        for (SessionEntity session : expired) {
+            playerRepository.deleteBySessionId(session.getSessionId());
+            resultRepository.deleteBySessionId(session.getSessionId());
+            sessionRepository.delete(session);
+        }
+        if (!expired.isEmpty()) {
+            log.info("event=session_cleanup removed={} remaining={}", expired.size(), sessionRepository.count());
         }
     }
 
-    private void updateSessionState(LiveSession session) {
-        // Session progress is time-driven so all clients observe the same question index.
-        if (!"LIVE".equals(session.state)) {
+    private void updateSessionState(SessionEntity session) {
+        if (!"LIVE".equals(session.getState())) {
             return;
         }
-        int totalQuestions = quizPlatformService.getQuizQuestions(session.quizCode).size();
-        int elapsedSeconds = (int) ((System.currentTimeMillis() - session.startEpochMs) / 1000L);
-        if (elapsedSeconds >= totalQuestions * session.questionDurationSeconds) {
-            session.state = "COMPLETED";
+        List<Question> questions = quizPlatformService.getQuizQuestions(session.getQuizCode());
+        int elapsedSeconds = (int) ((System.currentTimeMillis() - safeStartEpoch(session)) / 1000L);
+        if (elapsedSeconds >= questions.size() * session.getQuestionDurationSeconds()) {
+            session.setState("COMPLETED");
+            sessionRepository.save(session);
         }
     }
 
-    private int currentQuestionIndex(LiveSession session, int totalQuestions) {
-        // Integer division maps elapsed time windows to question slots.
-        int elapsedSeconds = (int) ((System.currentTimeMillis() - session.startEpochMs) / 1000L);
-        int index = elapsedSeconds / session.questionDurationSeconds;
+    private int currentQuestionIndex(SessionEntity session, int totalQuestions) {
+        int elapsedSeconds = (int) ((System.currentTimeMillis() - safeStartEpoch(session)) / 1000L);
+        int index = elapsedSeconds / session.getQuestionDurationSeconds();
         int maxIndex = Math.max(0, totalQuestions - 1);
         return Math.min(index, maxIndex);
     }
 
-    private int elapsedForQuestionSeconds(LiveSession session) {
-        int elapsedSeconds = (int) ((System.currentTimeMillis() - session.startEpochMs) / 1000L);
-        return elapsedSeconds % session.questionDurationSeconds;
+    private int elapsedForQuestionSeconds(SessionEntity session) {
+        int elapsedSeconds = (int) ((System.currentTimeMillis() - safeStartEpoch(session)) / 1000L);
+        return elapsedSeconds % session.getQuestionDurationSeconds();
     }
 
-    private LiveSession ensureSessionExists(String sessionId) {
-        LiveSession session = sessions.get(sessionId);
-        if (session == null) {
-            throw new IllegalArgumentException("Session not found: " + sessionId);
-        }
-        return session;
+    private long safeStartEpoch(SessionEntity session) {
+        return session.getStartEpochMs() == null ? System.currentTimeMillis() : session.getStartEpochMs();
     }
 
-    private static class LiveSession {
-        private final String sessionId;
-        private final String quizCode;
-        private final int questionDurationSeconds;
-        private final Map<String, String> participants = new HashMap<>();
-        private final Map<String, Integer> scores = new HashMap<>();
-        private final Map<String, List<Integer>> scoreHistory = new HashMap<>();
-        private final Set<String> submittedAnswers = new HashSet<>();
-        private String state = "LOBBY";
-        private long startEpochMs;
-        private long lastActivityEpochMs = System.currentTimeMillis();
+    private void touchSession(SessionEntity session) {
+        session.setLastActivityEpochMs(System.currentTimeMillis());
+        sessionRepository.save(session);
+    }
 
-        private LiveSession(String sessionId, String quizCode, int questionDurationSeconds) {
-            this.sessionId = sessionId;
-            this.quizCode = quizCode;
-            this.questionDurationSeconds = questionDurationSeconds;
-        }
+    private SessionEntity ensureSessionExists(String sessionId) {
+        return sessionRepository.findById(sessionId)
+                .orElseThrow(() -> new NotFoundException("Session not found: " + sessionId));
+    }
 
-        private void touch() {
-            this.lastActivityEpochMs = System.currentTimeMillis();
+    private List<Integer> parseHistory(String csv) {
+        if (csv == null || csv.isBlank()) {
+            return new ArrayList<>(List.of(0));
         }
+        List<Integer> history = new ArrayList<>();
+        for (String token : csv.split(",")) {
+            history.add(Integer.parseInt(token.trim()));
+        }
+        if (history.isEmpty()) {
+            history.add(0);
+        }
+        return history;
+    }
+
+    private String toHistoryCsv(List<Integer> history) {
+        return history.stream().map(String::valueOf).collect(Collectors.joining(","));
     }
 }

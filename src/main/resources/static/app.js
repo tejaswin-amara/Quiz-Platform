@@ -62,6 +62,12 @@ function showStatus(elementId, text, isError = false) {
   el.style.color = isError ? "#fca5a5" : "#cbd5e1";
 }
 
+function setSpinner(spinnerId, active) {
+  const el = document.getElementById(spinnerId);
+  if (!el) return;
+  el.hidden = !active;
+}
+
 async function loadComplexities() {
   const data = await api("/api/complexities");
   document.getElementById("complexity-output").textContent = JSON.stringify(data, null, 2);
@@ -80,11 +86,13 @@ async function createSession() {
 
     const createButton = document.querySelector("#screen-create button");
     createButton.disabled = true;
+    setSpinner("create-spinner", true);
     const created = await api("/session/create", {
       method: "POST",
       body: JSON.stringify({ title, questionIds, questionDurationSeconds }),
     });
     createButton.disabled = false;
+    setSpinner("create-spinner", false);
 
     state.role = "host";
     state.isHost = true;
@@ -105,6 +113,7 @@ async function createSession() {
   } catch (error) {
     const createButton = document.querySelector("#screen-create button");
     if (createButton) createButton.disabled = false;
+    setSpinner("create-spinner", false);
     showStatus("create-message", error.message, true);
   }
 }
@@ -115,11 +124,13 @@ async function joinSession() {
     const participantName = document.getElementById("join-name").value.trim();
     const joinButton = document.querySelector("#screen-join button");
     joinButton.disabled = true;
+    setSpinner("join-spinner", true);
     const joined = await api(`/session/join`, {
       method: "POST",
       body: JSON.stringify({ sessionId, participantName }),
     });
     joinButton.disabled = false;
+    setSpinner("join-spinner", false);
 
     state.role = "player";
     state.isHost = false;
@@ -139,6 +150,7 @@ async function joinSession() {
   } catch (error) {
     const joinButton = document.querySelector("#screen-join button");
     if (joinButton) joinButton.disabled = false;
+    setSpinner("join-spinner", false);
     showStatus("join-message", error.message, true);
   }
 }
@@ -218,10 +230,12 @@ function renderLeaderboard(entries) {
 
 async function manualLeaderboardRefresh() {
   try {
+    setSpinner("live-spinner", true);
     document.getElementById("live-loading").textContent = "Updating leaderboard...";
     const data = await api(`/session/${encodeURIComponent(state.sessionId)}/leaderboard`);
     renderLeaderboard(data);
   } finally {
+    setSpinner("live-spinner", false);
     document.getElementById("live-loading").textContent = "";
   }
 }
@@ -262,16 +276,15 @@ async function loadResults() {
 
   const list = document.getElementById("result-leaderboard");
   list.innerHTML = "";
-  let rank = "N/A";
+  let rank = data.rankByParticipant?.[state.participantId]
+    ? `#${data.rankByParticipant[state.participantId]}`
+    : "N/A";
   data.leaderboard.forEach((entry, idx) => {
     const li = document.createElement("li");
     li.textContent = `#${idx + 1} ${entry.participantName} — ${entry.score}`;
     if (idx === 0) li.classList.add("top-1");
     if (idx === 1) li.classList.add("top-2");
     if (idx === 2) li.classList.add("top-3");
-    if (entry.participantId === state.participantId) {
-      rank = `#${idx + 1}`;
-    }
     list.appendChild(li);
   });
   document.getElementById("result-rank").textContent = rank;
@@ -285,6 +298,7 @@ async function loadSessionState() {
   }
 
   try {
+    setSpinner("live-spinner", true);
     document.getElementById("live-loading").textContent = "Syncing live session...";
     const data = await api(`/session/${encodeURIComponent(state.sessionId)}/question`);
 
@@ -312,6 +326,7 @@ async function loadSessionState() {
   } catch (error) {
     showStatus("answer-status", error.message, true);
   } finally {
+    setSpinner("live-spinner", false);
     document.getElementById("live-loading").textContent = "";
   }
 }

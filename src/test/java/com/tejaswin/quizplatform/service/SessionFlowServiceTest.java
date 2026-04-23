@@ -1,5 +1,6 @@
 package com.tejaswin.quizplatform.service;
 
+import com.tejaswin.quizplatform.exception.NotFoundException;
 import com.tejaswin.quizplatform.model.LeaderboardEntry;
 import com.tejaswin.quizplatform.model.Question;
 import org.junit.jupiter.api.BeforeEach;
@@ -15,6 +16,7 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertThrows;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 @SpringBootTest
 @TestPropertySource(properties = {
@@ -72,7 +74,7 @@ class SessionFlowServiceTest {
         sessionService.getSessionQuestion(sessionId, true);
 
         assertThrows(IllegalArgumentException.class, () -> sessionService.submitSessionAnswer(sessionId, participantId, 5));
-        assertThrows(IllegalArgumentException.class, () -> sessionService.submitSessionAnswer("INVALID", participantId, 0));
+        assertThrows(NotFoundException.class, () -> sessionService.submitSessionAnswer("SZZZZZZZZ", participantId, 0));
     }
 
     @Test
@@ -85,5 +87,18 @@ class SessionFlowServiceTest {
         Map<String, Object> lobby = sessionService.getSessionQuestion(sessionId, false);
         assertEquals("LOBBY", lobby.get("state"));
         assertEquals(15, lobby.get("playerCount"));
+    }
+
+    @Test
+    void shouldMarkSessionCompletedAfterDurationElapses() throws InterruptedException {
+        String sessionId = String.valueOf(sessionService.createSession("Timed Session", List.of(2001L), 5).get("sessionId"));
+        sessionService.joinSession(sessionId, "Alice");
+        sessionService.getSessionQuestion(sessionId, true);
+
+        Thread.sleep(5_200);
+
+        Map<String, Object> state = sessionService.getSessionQuestion(sessionId, false);
+        assertEquals("COMPLETED", state.get("state"));
+        assertTrue(state.containsKey("playerCount"));
     }
 }

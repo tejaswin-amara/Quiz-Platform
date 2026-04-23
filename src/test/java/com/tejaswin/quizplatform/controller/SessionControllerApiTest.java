@@ -80,8 +80,8 @@ class SessionControllerApiTest {
     void shouldReturnBadRequestForInvalidSessionAndValidationFailures() throws Exception {
         mockMvc.perform(post("/session/join")
                         .contentType(MediaType.APPLICATION_JSON)
-                        .content("{\"sessionId\":\"INVALID\",\"participantName\":\"Tester\"}"))
-                .andExpect(status().isBadRequest());
+                        .content("{\"sessionId\":\"SABC12345\",\"participantName\":\"Tester\"}"))
+                .andExpect(status().isNotFound());
 
         mockMvc.perform(post("/session/create")
                         .contentType(MediaType.APPLICATION_JSON)

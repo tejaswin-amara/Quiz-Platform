@@ -3,6 +3,7 @@ package com.tejaswin.quizplatform.service;
 import com.tejaswin.quizplatform.dsa.DynamicProgrammingUtils;
 import com.tejaswin.quizplatform.dsa.QuestionBST;
 import com.tejaswin.quizplatform.dsa.TopicGraph;
+import com.tejaswin.quizplatform.exception.NotFoundException;
 import com.tejaswin.quizplatform.model.LeaderboardEntry;
 import com.tejaswin.quizplatform.model.Question;
 import com.tejaswin.quizplatform.model.Quiz;
@@ -224,7 +225,7 @@ public class QuizPlatformService {
     public synchronized Quiz ensureQuizExists(String code) {
         Quiz quiz = quizzes.get(code);
         if (quiz == null) {
-            throw new IllegalArgumentException("Quiz not found: " + code);
+            throw new NotFoundException("Quiz not found: " + code);
         }
         return quiz;
     }
