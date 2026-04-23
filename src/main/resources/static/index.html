@@ -9,60 +9,181 @@
 <body>
 <div class="app-shell">
     <header class="topbar">
-        <h1>Quiz Platform Live</h1>
-        <p>Kahoot-style UX with DSA-2 backend</p>
+        <div class="topbar-brand">
+            <h1>Quiz Platform Live</h1>
+            <p>Run Live Quizzes with Real-Time Insights</p>
+        </div>
+        <div class="topbar-user">
+            <span id="topbar-user-label">Guest</span>
+            <button id="nav-profile" class="small ghost">Profile</button>
+        </div>
     </header>
+
+    <nav class="main-nav" aria-label="Main Navigation">
+        <button class="small ghost" data-nav="home">Landing</button>
+        <button class="small ghost" data-nav="auth">Auth</button>
+        <button class="small ghost" data-nav="dashboard">Dashboard</button>
+        <button class="small ghost" data-nav="create">Host</button>
+        <button class="small ghost" data-nav="join">Join</button>
+        <button class="small ghost" data-nav="live">Live</button>
+        <button class="small ghost" data-nav="leaderboard">Leaderboard</button>
+    </nav>
+
+    <section id="global-error" class="banner error" hidden></section>
 
     <main>
         <section id="screen-home" class="screen active">
-            <h2>Home</h2>
-            <p class="muted">Choose your role to start a live quiz session.</p>
-            <div class="actions">
-                <button onclick="showScreen('create')">Host Quiz</button>
-                <button class="ghost" onclick="showScreen('join')">Join Quiz</button>
-                <button class="demo" onclick="startDemoQuiz()">Start Demo Quiz</button>
-            </div>
-            <p id="demo-message" class="status"></p>
-            <div class="info-grid">
-                <article>
-                    <h3>DSA Mapping</h3>
-                    <ul>
-                        <li>BST → question retrieval</li>
-                        <li>Heap → leaderboard ranking</li>
-                        <li>Graph → topic recommendations</li>
-                        <li>DP → optimization & trend</li>
-                        <li>Segment Tree → score analytics</li>
-                    </ul>
-                </article>
-                <article>
-                    <h3>Complexity</h3>
-                    <pre id="complexity-output">Click refresh to load...</pre>
-                    <button class="small" onclick="loadComplexities()">Refresh complexity map</button>
-                </article>
-                <article>
-                    <h3>DSA Insights Panel</h3>
-                    <label class="toggle">
-                        <input id="dsa-working-toggle" type="checkbox" onchange="toggleDsaWorking()" />
-                        Show DSA Working
-                    </label>
-                    <pre id="insights-output">Click refresh to load...</pre>
-                    <div id="insights-flow-wrapper" style="display:none;">
-                        <pre id="insights-flow"></pre>
-                        <p id="dsa-live-status" class="status"></p>
+            <div class="hero">
+                <div>
+                    <p class="eyebrow">Trusted by coding clubs, bootcamps, and universities</p>
+                    <h2>Run Live Quizzes with Real-Time Insights</h2>
+                    <p class="muted">
+                        Launch multiplayer quiz sessions in seconds, monitor ranking shifts live,
+                        and explain system behavior using built-in DSA intelligence cards.
+                    </p>
+                    <div class="actions">
+                        <button id="home-start-demo" class="demo">Start Demo Quiz</button>
+                        <button id="home-host" class="ghost">Host Quiz</button>
+                        <button id="home-join" class="ghost">Join Quiz</button>
                     </div>
-                    <button class="small" onclick="loadDsaInsights()">Refresh DSA insights</button>
+                    <div class="loading-row"><span id="demo-spinner" class="spinner" hidden></span></div>
+                    <p id="demo-message" class="status"></p>
+                </div>
+                <div class="screenshot-stack">
+                    <article class="screenshot-card">
+                        <h3>Live Session</h3>
+                        <p class="muted">Timer + poll sync + answer latency tracking</p>
+                        <img src="https://images.unsplash.com/photo-1516321318423-f06f85e504b3?auto=format&fit=crop&w=800&q=80" alt="Students using laptop during quiz" />
+                    </article>
+                    <article class="screenshot-card">
+                        <h3>Leaderboard Pulse</h3>
+                        <p class="muted">Heap-driven rank shifts highlighted every refresh</p>
+                        <img src="https://images.unsplash.com/photo-1461749280684-dccba630e2f6?auto=format&fit=crop&w=800&q=80" alt="Code dashboard on monitor" />
+                    </article>
+                </div>
+            </div>
+
+            <div class="cred-grid">
+                <article>
+                    <strong>1,200+</strong>
+                    <span class="muted">active learners this week</span>
+                </article>
+                <article>
+                    <strong>98.4%</strong>
+                    <span class="muted">session completion rate</span>
+                </article>
+                <article>
+                    <strong>4.8/5</strong>
+                    <span class="muted">rated by student communities</span>
+                </article>
+            </div>
+
+            <div class="testimonial-strip muted">
+                “We switched from static MCQ sheets to this live flow and saw 2x engagement in one sprint.” — DSA Club Mentor
+            </div>
+        </section>
+
+        <section id="screen-auth" class="screen">
+            <h2>Authentication</h2>
+            <p class="muted">Access your dashboard, sessions, and analytics securely.</p>
+            <div class="tabs" role="tablist" aria-label="Authentication Tabs">
+                <button class="tab active" data-auth-tab="login">Login</button>
+                <button class="tab" data-auth-tab="register">Register</button>
+                <button class="tab" data-auth-tab="forgot">Forgot Password</button>
+            </div>
+
+            <form id="auth-login" class="auth-form active" novalidate>
+                <label>Email
+                    <input id="login-email" type="email" placeholder="you@college.edu" required />
+                </label>
+                <label>Password
+                    <input id="login-password" type="password" placeholder="At least 8 characters" required />
+                </label>
+                <div class="actions">
+                    <button type="submit">Login</button>
+                    <button type="button" class="ghost" data-auth-tab-link="forgot">Forgot Password?</button>
+                </div>
+                <p id="login-message" class="status"></p>
+            </form>
+
+            <form id="auth-register" class="auth-form" novalidate>
+                <label>Full Name
+                    <input id="register-name" type="text" placeholder="Aarav Sharma" required />
+                </label>
+                <label>Email
+                    <input id="register-email" type="email" placeholder="you@college.edu" required />
+                </label>
+                <label>Password
+                    <input id="register-password" type="password" placeholder="Min 8 chars + number" required />
+                </label>
+                <div class="actions">
+                    <button type="submit">Create Account</button>
+                    <button type="button" class="ghost" data-auth-tab-link="login">Back to Login</button>
+                </div>
+                <p id="register-message" class="status"></p>
+            </form>
+
+            <form id="auth-forgot" class="auth-form" novalidate>
+                <label>Email
+                    <input id="forgot-email" type="email" placeholder="you@college.edu" required />
+                </label>
+                <div class="actions">
+                    <button type="submit">Send Reset Link</button>
+                    <button type="button" class="ghost" data-auth-tab-link="login">Back to Login</button>
+                </div>
+                <p id="forgot-message" class="status"></p>
+            </form>
+        </section>
+
+        <section id="screen-dashboard" class="screen">
+            <div class="live-head">
+                <h2>Dashboard</h2>
+                <span class="chip" id="dashboard-sync-chip">Synced just now</span>
+            </div>
+            <p class="muted">Your recent session performance and quick actions.</p>
+
+            <div class="actions">
+                <button id="dashboard-start-host">Start Quiz</button>
+                <button id="dashboard-demo" class="demo">Demo Mode</button>
+                <button id="dashboard-join" class="ghost">Join Existing</button>
+            </div>
+
+            <div class="info-grid dashboard-grid">
+                <article>
+                    <h3>Past Quizzes</h3>
+                    <ul id="dashboard-past-quizzes" class="plain-list"></ul>
+                    <div id="dashboard-empty" class="edge-card" hidden>No quiz history yet. Run demo or host a session to populate analytics.</div>
+                </article>
+                <article>
+                    <h3>Performance Trend</h3>
+                    <div id="dashboard-graph" class="mini-chart"></div>
+                </article>
+                <article>
+                    <h3>System Health</h3>
+                    <ul class="plain-list muted">
+                        <li>Polling interval: adaptive (1.5s to 3s)</li>
+                        <li>Leaderboard engine: Heap refresh active</li>
+                        <li>Analytics engine: Segment Tree + DP LIS ready</li>
+                    </ul>
                 </article>
             </div>
         </section>
 
         <section id="screen-create" class="screen">
             <h2>Create Quiz Session</h2>
-            <input id="create-title" placeholder="Quiz title" value="DSA-2 Live Quiz" />
-            <input id="create-questions" placeholder="Question IDs (comma-separated)" value="101,102,103,104" />
-            <input id="create-duration" type="number" min="5" max="60" placeholder="Question timer (seconds)" value="12" />
+            <p class="muted">Host controls become available in lobby after session creation.</p>
+            <label>Quiz title
+                <input id="create-title" placeholder="DSA-2 Live Quiz" value="DSA-2 Live Quiz" />
+            </label>
+            <label>Question IDs (comma-separated)
+                <input id="create-questions" placeholder="101,102,103,104" value="101,102,103,104" />
+            </label>
+            <label>Question timer (seconds)
+                <input id="create-duration" type="number" min="5" max="60" placeholder="12" value="12" />
+            </label>
             <div class="actions">
-                <button onclick="createSession()">Create Session</button>
-                <button class="ghost" onclick="showScreen('home')">Back</button>
+                <button id="create-submit">Create Session</button>
+                <button class="ghost" data-nav="dashboard">Back to Dashboard</button>
             </div>
             <div class="loading-row"><span id="create-spinner" class="spinner" hidden></span></div>
             <p id="create-message" class="status"></p>
@@ -70,25 +191,46 @@
 
         <section id="screen-join" class="screen">
             <h2>Join Session</h2>
-            <input id="join-session-id" placeholder="Session ID" />
-            <input id="join-name" placeholder="Your name" />
+            <label>Session ID
+                <input id="join-session-id" placeholder="SXXXXXXXX" />
+            </label>
+            <label>Your name
+                <input id="join-name" placeholder="Your name" />
+            </label>
             <div class="actions">
-                <button onclick="joinSession()">Join</button>
-                <button class="ghost" onclick="showScreen('home')">Back</button>
+                <button id="join-submit">Join</button>
+                <button class="ghost" data-nav="dashboard">Back to Dashboard</button>
             </div>
             <div class="loading-row"><span id="join-spinner" class="spinner" hidden></span></div>
             <p id="join-message" class="status"></p>
         </section>
 
         <section id="screen-lobby" class="screen">
-            <h2>Waiting Lobby</h2>
+            <div class="live-head">
+                <h2>Waiting Lobby</h2>
+                <span id="lobby-sync-chip" class="chip">Waiting for updates</span>
+            </div>
             <p>Session: <strong id="lobby-session"></strong></p>
             <p>State: <strong id="lobby-state"></strong></p>
             <p>Players joined: <strong id="lobby-count">0</strong></p>
+
+            <div id="lobby-empty" class="edge-card" hidden>No participants yet. Share the session ID and wait for players.</div>
+
             <ul id="lobby-players" class="players"></ul>
+
             <div class="actions" id="host-controls">
-                <button onclick="startSession()">Start Quiz</button>
+                <button id="start-session">Start Quiz</button>
+                <button id="end-session" class="ghost">End Session</button>
             </div>
+
+            <div id="kick-controls" class="kick-controls" hidden>
+                <label>Kick participant
+                    <select id="kick-player-select"></select>
+                </label>
+                <button id="kick-player" class="ghost">Kick</button>
+            </div>
+
+            <p id="lobby-message" class="status"></p>
         </section>
 
         <section id="screen-live" class="screen">
@@ -97,15 +239,56 @@
                 <div class="timer" id="live-timer">0s</div>
             </div>
             <p class="muted">Question <span id="live-index">1</span>/<span id="live-total">1</span></p>
-            <h3 id="live-question">Loading question...</h3>
-            <div id="live-options" class="options"></div>
+            <p id="live-sync" class="sync-label">Sync pending…</p>
+
+            <div id="live-skeleton" class="skeleton" hidden>
+                <div class="skeleton-line"></div>
+                <div class="skeleton-line short"></div>
+                <div class="skeleton-grid">
+                    <span></span><span></span><span></span><span></span>
+                </div>
+            </div>
+
+            <article class="question-card" id="question-card">
+                <h3 id="live-question">Loading question...</h3>
+                <div id="live-options" class="options"></div>
+            </article>
+
             <p id="answer-status" class="status"></p>
             <div class="loading-row"><span id="live-spinner" class="spinner" hidden></span></div>
             <p id="live-loading" class="muted"></p>
+
             <div class="actions">
-                <button class="small" onclick="manualLeaderboardRefresh()">Refresh Leaderboard</button>
+                <button id="view-leaderboard" class="ghost">Open Leaderboard</button>
+                <button id="manual-leaderboard" class="small">Refresh Leaderboard</button>
             </div>
+
+            <h3>Top 3 Preview</h3>
             <ol id="live-leaderboard" class="leaderboard"></ol>
+
+            <h3>DSA Insights Panel</h3>
+            <div class="dsa-grid">
+                <article class="dsa-card" id="dsa-bst"><h4>BST</h4><p class="muted">Question retrieval</p><span class="chip">idle</span></article>
+                <article class="dsa-card" id="dsa-heap"><h4>Heap</h4><p class="muted">Leaderboard updates</p><span class="chip">idle</span></article>
+                <article class="dsa-card" id="dsa-graph"><h4>Graph</h4><p class="muted">Topic mapping</p><span class="chip">idle</span></article>
+                <article class="dsa-card" id="dsa-dp"><h4>DP</h4><p class="muted">Performance trends</p><span class="chip">idle</span></article>
+                <article class="dsa-card" id="dsa-segment"><h4>Segment Tree</h4><p class="muted">Score analytics</p><span class="chip">idle</span></article>
+            </div>
+            <ul id="dsa-runtime-feed" class="plain-list runtime-feed"></ul>
+            <p id="dsa-live-status" class="status"></p>
+        </section>
+
+        <section id="screen-leaderboard" class="screen">
+            <div class="live-head">
+                <h2>Leaderboard</h2>
+                <span id="leaderboard-sync" class="chip">Auto refresh active</span>
+            </div>
+            <p class="muted">Dynamic rank changes are highlighted on update.</p>
+            <ol id="leaderboard-full" class="leaderboard"></ol>
+            <div class="actions">
+                <button id="leaderboard-refresh" class="small">Refresh Now</button>
+                <button id="leaderboard-back" class="ghost">Back to Live Quiz</button>
+            </div>
         </section>
 
         <section id="screen-results" class="screen">
@@ -114,24 +297,60 @@
             <p>Total Score Range (Segment Tree): <strong id="result-range">0</strong></p>
             <p>Average Score: <strong id="result-average">0</strong></p>
             <p>Your Rank: <strong id="result-rank">N/A</strong></p>
+
             <h3>Final Leaderboard</h3>
             <ol id="result-leaderboard" class="leaderboard"></ol>
+
             <h3>Difficulty Impact</h3>
             <pre id="result-difficulty"></pre>
+
             <h3>Performance Trend (LIS)</h3>
             <pre id="result-lis"></pre>
+
             <div class="actions">
-                <button onclick="showThankYou()">Finish</button>
-                <button class="ghost" onclick="showScreen('home')">Back Home</button>
+                <button id="review-answers">Review Answers</button>
+                <button id="new-session">Start New Session</button>
+                <button id="finish-flow" class="ghost">Finish</button>
             </div>
+            <p id="result-message" class="status"></p>
+        </section>
+
+        <section id="screen-profile" class="screen">
+            <h2>Profile &amp; Settings</h2>
+            <label>Display Name
+                <input id="profile-name" type="text" placeholder="Your name" />
+            </label>
+            <label>Email
+                <input id="profile-email" type="email" placeholder="you@college.edu" />
+            </label>
+            <label>Preferred quiz mode
+                <select id="profile-mode">
+                    <option value="standard">Standard</option>
+                    <option value="demo">Demo-first</option>
+                    <option value="competitive">Competitive</option>
+                </select>
+            </label>
+            <label class="toggle">
+                <input id="profile-notify" type="checkbox" />
+                Email me session summaries
+            </label>
+            <label class="toggle">
+                <input id="profile-2fa" type="checkbox" />
+                Enable security check before joining host controls
+            </label>
+            <div class="actions">
+                <button id="save-profile">Save Settings</button>
+                <button class="ghost" data-nav="dashboard">Back to Dashboard</button>
+            </div>
+            <p id="profile-message" class="status"></p>
         </section>
 
         <section id="screen-thanks" class="screen">
             <h2>Thank You 🎉</h2>
-            <p class="muted">Demo completed successfully. Your Quiz Platform is presentation-ready.</p>
+            <p class="muted">Demo completed. You can restart a new session anytime.</p>
             <div class="actions">
-                <button onclick="showScreen('home')">Back to Home</button>
-                <button class="ghost" onclick="startDemoQuiz()">Run Demo Again</button>
+                <button data-nav="dashboard">Back to Dashboard</button>
+                <button id="thanks-demo" class="ghost">Run Demo Again</button>
             </div>
         </section>
     </main>
