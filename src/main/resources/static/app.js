@@ -6,11 +6,16 @@ const state = {
   isHost: false,
   currentQuestionId: null,
   selectedOption: null,
-  pollHandle: null,
+  sessionPollHandle: null,
+  leaderboardPollHandle: null,
+  pollMode: null,
+  inFlightSession: false,
+  inFlightLeaderboard: false,
   lastLeaderboardSignature: "",
+  dsaInsights: null,
 };
 
-const screens = ["home", "create", "join", "lobby", "live", "results"];
+const screens = ["home", "create", "join", "lobby", "live", "results", "thanks"];
 
 async function api(url, options = {}) {
   const response = await fetch(url, {
@@ -45,21 +50,49 @@ function parseQuestionIds(raw) {
 }
 
 function stopPolling() {
-  if (state.pollHandle) {
-    clearInterval(state.pollHandle);
-    state.pollHandle = null;
+  if (state.sessionPollHandle) {
+    clearInterval(state.sessionPollHandle);
+    state.sessionPollHandle = null;
   }
+  if (state.leaderboardPollHandle) {
+    clearInterval(state.leaderboardPollHandle);
+    state.leaderboardPollHandle = null;
+  }
+  state.pollMode = null;
 }
 
-function startPolling() {
-  stopPolling();
-  state.pollHandle = setInterval(loadSessionState, 2500);
+function startSessionPolling(mode) {
+  const interval = mode === "LIVE" ? 2000 : 3000;
+  if (state.sessionPollHandle && state.pollMode === mode) {
+    return;
+  }
+  if (state.sessionPollHandle) {
+    clearInterval(state.sessionPollHandle);
+  }
+  state.pollMode = mode;
+  state.sessionPollHandle = setInterval(loadSessionState, interval);
+}
+
+function startLeaderboardPolling() {
+  if (state.leaderboardPollHandle) return;
+  state.leaderboardPollHandle = setInterval(() => manualLeaderboardRefresh(false), 1500);
+}
+
+function stopLeaderboardPolling() {
+  if (state.leaderboardPollHandle) {
+    clearInterval(state.leaderboardPollHandle);
+    state.leaderboardPollHandle = null;
+  }
 }
 
 function showStatus(elementId, text, isError = false) {
   const el = document.getElementById(elementId);
+  if (!el) return;
   el.textContent = text;
-  el.style.color = isError ? "#fca5a5" : "#cbd5e1";
+  el.classList.remove("success", "error");
+  if (text) {
+    el.classList.add(isError ? "error" : "success");
+  }
 }
 
 function setSpinner(spinnerId, active) {
@@ -73,9 +106,41 @@ async function loadComplexities() {
   document.getElementById("complexity-output").textContent = JSON.stringify(data, null, 2);
 }
 
+function toggleDsaWorking() {
+  const show = document.getElementById("dsa-working-toggle").checked;
+  document.getElementById("insights-flow-wrapper").style.display = show ? "block" : "none";
+  if (show && state.dsaInsights) {
+    renderDsaInsights(state.dsaInsights);
+  }
+}
+
+function renderDsaInsights(data) {
+  state.dsaInsights = data;
+  document.getElementById("insights-output").textContent = JSON.stringify(
+    {
+      questionFlow: data.questionFlow,
+      leaderboardFlow: data.leaderboardFlow,
+      recommendationFlow: data.recommendationFlow,
+      optimizationFlow: data.optimizationFlow,
+      analyticsFlow: data.analyticsFlow,
+    },
+    null,
+    2
+  );
+
+  const working = document.getElementById("dsa-working-toggle").checked;
+  if (!working) return;
+  const diagram = data.workingDiagram || [];
+  const signals = data.runtimeSignals || [];
+  document.getElementById("insights-flow").textContent =
+    `DSA Working Flow\n\n${diagram.map((line) => `• ${line}`).join("\n")}\n\nLive Signals\n${signals
+      .map((line) => `• ${line}`)
+      .join("\n")}`;
+}
+
 async function loadDsaInsights() {
   const data = await api("/dsa/insights");
-  document.getElementById("insights-output").textContent = JSON.stringify(data, null, 2);
+  renderDsaInsights(data);
 }
 
 async function createSession() {
@@ -97,6 +162,7 @@ async function createSession() {
     state.role = "host";
     state.isHost = true;
     state.sessionId = created.sessionId;
+    state.participantId = null;
 
     showStatus(
       "create-message",
@@ -108,13 +174,37 @@ async function createSession() {
     document.getElementById("host-controls").style.display = "flex";
 
     showScreen("lobby");
-    startPolling();
+    startSessionPolling("LOBBY");
     await loadSessionState();
   } catch (error) {
     const createButton = document.querySelector("#screen-create button");
     if (createButton) createButton.disabled = false;
     setSpinner("create-spinner", false);
     showStatus("create-message", error.message, true);
+  }
+}
+
+async function startDemoQuiz() {
+  try {
+    setSpinner("create-spinner", true);
+    const demo = await api("/demo/start");
+    state.role = "host";
+    state.isHost = true;
+    state.sessionId = demo.sessionId;
+    state.participantId = null;
+    document.getElementById("host-controls").style.display = "flex";
+    document.getElementById("lobby-session").textContent = demo.sessionId;
+    document.getElementById("lobby-state").textContent = demo.state;
+    document.getElementById("lobby-count").textContent = String(demo.playerCount || 0);
+    renderPlayers(demo.players || []);
+    showStatus("demo-message", demo.message || "Demo session ready.");
+    showScreen("lobby");
+    startSessionPolling("LOBBY");
+    await loadSessionState();
+  } catch (error) {
+    showStatus("demo-message", error.message, true);
+  } finally {
+    setSpinner("create-spinner", false);
   }
 }
 
@@ -145,7 +235,7 @@ async function joinSession() {
     showStatus("join-message", `Joined as ${joined.participantName}. Waiting for host to start...`);
 
     showScreen("lobby");
-    startPolling();
+    startSessionPolling("LOBBY");
     await loadSessionState();
   } catch (error) {
     const joinButton = document.querySelector("#screen-join button");
@@ -158,6 +248,7 @@ async function joinSession() {
 async function startSession() {
   try {
     await api(`/session/${encodeURIComponent(state.sessionId)}/question?start=true`);
+    startSessionPolling("LIVE");
     await loadSessionState();
   } catch (error) {
     showStatus("answer-status", error.message, true);
@@ -182,6 +273,9 @@ function renderQuestion(questionPayload) {
   const timer = document.getElementById("live-timer");
   timer.textContent = `${questionPayload.remainingSeconds}s`;
   timer.classList.toggle("warning", questionPayload.remainingSeconds <= 5);
+  timer.classList.remove("pulse");
+  void timer.offsetWidth;
+  timer.classList.add("pulse");
 
   if (state.currentQuestionId !== questionPayload.question.id) {
     state.currentQuestionId = questionPayload.question.id;
@@ -228,15 +322,26 @@ function renderLeaderboard(entries) {
   state.lastLeaderboardSignature = signature;
 }
 
-async function manualLeaderboardRefresh() {
+async function manualLeaderboardRefresh(manual = true) {
+  if (!state.sessionId || state.inFlightLeaderboard) {
+    return;
+  }
+
   try {
+    state.inFlightLeaderboard = true;
     setSpinner("live-spinner", true);
-    document.getElementById("live-loading").textContent = "Updating leaderboard...";
+    if (manual) {
+      document.getElementById("live-loading").textContent = "Updating leaderboard...";
+    }
     const data = await api(`/session/${encodeURIComponent(state.sessionId)}/leaderboard`);
     renderLeaderboard(data);
+    document.getElementById("dsa-live-status").textContent = "Heap updated → leaderboard recalculated";
   } finally {
+    state.inFlightLeaderboard = false;
     setSpinner("live-spinner", false);
-    document.getElementById("live-loading").textContent = "";
+    if (manual) {
+      document.getElementById("live-loading").textContent = "";
+    }
   }
 }
 
@@ -257,10 +362,11 @@ async function submitAnswer(answerOption, clickedButton) {
       "answer-status",
       response.isCorrect
         ? `Correct! Score: ${response.score}`
-        : `Incorrect. Correct option: ${String.fromCharCode(65 + response.correctOption)}`
+        : `Incorrect. Correct option: ${String.fromCharCode(65 + response.correctOption)}`,
+      !response.isCorrect
     );
 
-    await manualLeaderboardRefresh();
+    await manualLeaderboardRefresh(false);
   } catch (error) {
     showStatus("answer-status", error.message, true);
   }
@@ -271,7 +377,7 @@ async function loadResults() {
   document.getElementById("result-session").textContent = state.sessionId;
   document.getElementById("result-range").textContent = String(data.totalScoreRange);
   document.getElementById("result-average").textContent = Number(data.averageScore || 0).toFixed(2);
-  document.getElementById("result-difficulty").textContent = JSON.stringify(data.difficultyImpact || {}, null, 2);
+  document.getElementById("result-difficulty").textContent = JSON.stringify(data.difficultyScoreBreakdown || {}, null, 2);
   document.getElementById("result-lis").textContent = JSON.stringify(data.lisPerformanceTrend, null, 2);
 
   const list = document.getElementById("result-leaderboard");
@@ -288,21 +394,29 @@ async function loadResults() {
     list.appendChild(li);
   });
   document.getElementById("result-rank").textContent = rank;
+  document.getElementById("dsa-live-status").textContent = "Segment Tree queried + DP LIS computed for results";
 
   showScreen("results");
 }
 
+function showThankYou() {
+  showScreen("thanks");
+}
+
 async function loadSessionState() {
-  if (!state.sessionId) {
+  if (!state.sessionId || state.inFlightSession) {
     return;
   }
 
   try {
+    state.inFlightSession = true;
     setSpinner("live-spinner", true);
     document.getElementById("live-loading").textContent = "Syncing live session...";
     const data = await api(`/session/${encodeURIComponent(state.sessionId)}/question`);
 
     if (data.state === "LOBBY") {
+      stopLeaderboardPolling();
+      startSessionPolling("LOBBY");
       document.getElementById("lobby-state").textContent = data.state;
       document.getElementById("lobby-count").textContent = String(data.playerCount || 0);
       renderPlayers(data.players || []);
@@ -313,9 +427,14 @@ async function loadSessionState() {
     }
 
     if (data.state === "LIVE") {
+      startSessionPolling("LIVE");
+      startLeaderboardPolling();
       showScreen("live");
       renderQuestion(data);
-      await manualLeaderboardRefresh();
+      document.getElementById("dsa-live-status").textContent = "BST lookup → question rendered";
+      if (!state.lastLeaderboardSignature) {
+        await manualLeaderboardRefresh(false);
+      }
       return;
     }
 
@@ -326,6 +445,7 @@ async function loadSessionState() {
   } catch (error) {
     showStatus("answer-status", error.message, true);
   } finally {
+    state.inFlightSession = false;
     setSpinner("live-spinner", false);
     document.getElementById("live-loading").textContent = "";
   }

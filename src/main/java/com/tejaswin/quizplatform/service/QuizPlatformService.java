@@ -273,8 +273,23 @@ public class QuizPlatformService {
                 "leaderboardFlow", "Max Heap ranks participants on every leaderboard fetch (O(n log n)).",
                 "recommendationFlow", "Graph BFS/DFS/Topo powers topic progression and recommendations (O(V + E)).",
                 "optimizationFlow", "Knapsack DP selects best weighted question subset (O(n × W)).",
-                "analyticsFlow", "Segment Tree answers score range queries while LIS tracks trend over attempts."
+                "analyticsFlow", "Segment Tree answers score range queries while LIS tracks trend over attempts.",
+                "workingDiagram", List.of(
+                        "Question Request -> BST.search(id) -> Question Returned",
+                        "Answer Submit -> Score Update -> Heap Rebuild -> Leaderboard Sorted",
+                        "Results Request -> SegmentTree.rangeQuery + DP.LIS -> Analytics Output"
+                ),
+                "runtimeSignals", List.of(
+                        "BST lookup -> question payload ready",
+                        "Heap updated -> leaderboard recalculated",
+                        "Segment Tree queried -> score range refreshed",
+                        "DP LIS computed -> trend value refreshed"
+                )
         ));
+    }
+
+    public synchronized boolean questionExists(long id) {
+        return allQuestions.containsKey(id);
     }
 
     private void validateQuestion(Question question) {

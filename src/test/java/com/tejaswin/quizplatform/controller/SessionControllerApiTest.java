@@ -88,4 +88,13 @@ class SessionControllerApiTest {
                         .content("{\"title\":\"\",\"questionIds\":[],\"questionDurationSeconds\":2}"))
                 .andExpect(status().isBadRequest());
     }
+
+    @Test
+    void shouldStartDemoSessionWithPlayersInSingleCall() throws Exception {
+        mockMvc.perform(get("/demo/start"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.sessionId").exists())
+                .andExpect(jsonPath("$.playerCount").value(4))
+                .andExpect(jsonPath("$.players").isArray());
+    }
 }

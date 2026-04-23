@@ -38,6 +38,8 @@ public class SessionService {
     private final ResultRepository resultRepository;
     private final int defaultQuestionDurationSeconds;
     private final int expiryMinutes;
+    private static final List<Long> DEMO_QUESTION_IDS = List.of(9101L, 9102L, 9103L, 9104L, 9105L, 9106L, 9107L, 9108L);
+    private static final List<String> DEMO_PLAYERS = List.of("Ava", "Liam", "Noah", "Mia");
 
     public SessionService(
             QuizPlatformService quizPlatformService,
@@ -79,6 +81,26 @@ public class SessionService {
                 "quizCode", quiz.code(),
                 "state", session.getState()
         );
+    }
+
+    public synchronized Map<String, Object> startDemoSession() {
+        ensureDemoQuestions();
+        Map<String, Object> created = createSession("Demo DSA Quiz", DEMO_QUESTION_IDS, 10);
+        String sessionId = String.valueOf(created.get("sessionId"));
+
+        List<Map<String, Object>> joinedPlayers = new ArrayList<>();
+        for (String name : DEMO_PLAYERS) {
+            joinedPlayers.add(joinSession(sessionId, name));
+        }
+
+        return new LinkedHashMap<>(Map.of(
+                "sessionId", sessionId,
+                "quizCode", created.get("quizCode"),
+                "state", created.get("state"),
+                "playerCount", joinedPlayers.size(),
+                "players", joinedPlayers.stream().map(entry -> String.valueOf(entry.get("participantName"))).toList(),
+                "message", "Demo session ready. Start quiz from lobby."
+        ));
     }
 
     public synchronized Map<String, Object> joinSession(String sessionId, String participantName) {
@@ -157,6 +179,7 @@ public class SessionService {
                 "questionIndex", index,
                 "totalQuestions", questions.size(),
                 "remainingSeconds", remainingSeconds,
+                "questionDurationSeconds", session.getQuestionDurationSeconds(),
                 "question", Map.of(
                         "id", question.id(),
                         "text", question.text(),
@@ -375,5 +398,32 @@ public class SessionService {
 
     private String toHistoryCsv(List<Integer> history) {
         return history.stream().map(String::valueOf).collect(Collectors.joining(","));
+    }
+
+    private void ensureDemoQuestions() {
+        if (!quizPlatformService.questionExists(9101L)) {
+            quizPlatformService.addQuestion(new Question(9101L, "BST search average complexity?", List.of("O(n)", "O(log n)", "O(1)", "O(n log n)"), 1, "Binary Search", 2, 2));
+        }
+        if (!quizPlatformService.questionExists(9102L)) {
+            quizPlatformService.addQuestion(new Question(9102L, "Heap is best for?", List.of("Range sum", "Stable sorting", "Priority retrieval", "Graph traversal"), 2, "Heap", 2, 2));
+        }
+        if (!quizPlatformService.questionExists(9103L)) {
+            quizPlatformService.addQuestion(new Question(9103L, "BFS uses which DS?", List.of("Stack", "Queue", "Heap", "Tree"), 1, "Graphs", 2, 2));
+        }
+        if (!quizPlatformService.questionExists(9104L)) {
+            quizPlatformService.addQuestion(new Question(9104L, "Topological sort works on?", List.of("DAG", "Any tree", "Undirected graph", "Heap"), 0, "Topological Sort", 3, 3));
+        }
+        if (!quizPlatformService.questionExists(9105L)) {
+            quizPlatformService.addQuestion(new Question(9105L, "Knapsack is solved with?", List.of("Greedy always", "Divide and conquer", "Dynamic programming", "BFS"), 2, "Dynamic Programming", 3, 3));
+        }
+        if (!quizPlatformService.questionExists(9106L)) {
+            quizPlatformService.addQuestion(new Question(9106L, "LIS complexity in this project?", List.of("O(log n)", "O(n)", "O(n^2)", "O(n^3)"), 2, "Dynamic Programming", 2, 2));
+        }
+        if (!quizPlatformService.questionExists(9107L)) {
+            quizPlatformService.addQuestion(new Question(9107L, "Segment Tree range query?", List.of("O(log n)", "O(1)", "O(n)", "O(n log n)"), 0, "Segment Tree", 3, 2));
+        }
+        if (!quizPlatformService.questionExists(9108L)) {
+            quizPlatformService.addQuestion(new Question(9108L, "Leaderboard sorting uses?", List.of("BST", "Graph DFS", "Max Heap", "Segment Tree"), 2, "Heap", 2, 2));
+        }
     }
 }

@@ -101,4 +101,11 @@ class SessionFlowServiceTest {
         assertEquals("COMPLETED", state.get("state"));
         assertTrue(state.containsKey("playerCount"));
     }
+
+    @Test
+    void shouldCreateReadyDemoSessionInOneCall() {
+        Map<String, Object> demo = sessionService.startDemoSession();
+        assertNotNull(demo.get("sessionId"));
+        assertEquals(4, demo.get("playerCount"));
+    }
 }

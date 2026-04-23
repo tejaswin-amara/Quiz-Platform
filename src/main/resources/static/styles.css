@@ -50,12 +50,17 @@ body {
 
 .screen.active {
     display: block;
-    animation: fadeIn 0.35s ease;
+    animation: fadeIn 0.35s ease, slideUp 0.35s ease;
 }
 
 @keyframes fadeIn {
     from { opacity: 0; transform: translateY(6px); }
     to { opacity: 1; transform: translateY(0); }
+}
+
+@keyframes slideUp {
+    from { transform: translateY(10px); }
+    to { transform: translateY(0); }
 }
 
 input, button {
@@ -95,10 +100,19 @@ button.small {
     font-size: 13px;
 }
 
+.actions button {
+    flex: 1;
+}
+
+button.demo {
+    background: linear-gradient(90deg, #16a34a, #22c55e);
+}
+
 .actions {
     display: flex;
     gap: 10px;
     margin-top: 8px;
+    align-items: stretch;
 }
 
 .muted {
@@ -108,6 +122,28 @@ button.small {
 .status {
     margin-top: 8px;
     color: #cbd5e1;
+}
+
+.status.success {
+    color: #86efac;
+}
+
+.status.error {
+    color: #fca5a5;
+}
+
+.toggle {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    color: #cbd5e1;
+    font-size: 14px;
+    margin-bottom: 8px;
+}
+
+.toggle input {
+    width: auto;
+    margin: 0;
 }
 
 .loading-row {
@@ -177,9 +213,20 @@ pre {
     font-weight: 700;
 }
 
+.timer.pulse {
+    animation: timerPulse .7s ease;
+}
+
 .timer.warning {
     color: #fde68a;
     border-color: #f59e0b;
+    box-shadow: 0 0 0 1px rgba(245, 158, 11, 0.35);
+}
+
+@keyframes timerPulse {
+    0% { transform: scale(0.98); }
+    50% { transform: scale(1.03); }
+    100% { transform: scale(1); }
 }
 
 .options {
@@ -239,7 +286,16 @@ button:disabled {
 }
 
 @media (max-width: 700px) {
+    .app-shell {
+        width: 96vw;
+        margin: 10px auto;
+    }
+
     .actions {
         flex-direction: column;
+    }
+
+    .screen {
+        padding: 14px;
     }
 }

@@ -1,17 +1,18 @@
 # Quiz Platform (DSA-2 + Kahoot-style Live Sessions)
 
-Production-hardened Spring Boot quiz platform with a live session enhancement layer and explicit DSA visibility for viva.
+Production-hardened Spring Boot quiz platform with live sessions, demo mode, and explicit DSA visibility for viva.
 
 ## 1) System Architecture (high level)
 
 ```text
-[Browser UI: Home/Create/Join/Lobby/Live/Results]
+[Browser UI: Home/Create/Join/Lobby/Live/Results/Thanks + Demo]
             |
             v
 [REST Controllers]
   - /api/* (core quiz + DSA features)
   - /session/* (live session flow)
   - /dsa/insights (viva visibility)
+  - /demo/start (one-click demo session)
             |
             v
 [Services]
@@ -72,6 +73,9 @@ Production-hardened Spring Boot quiz platform with a live session enhancement la
 - `GET /session/{id}/leaderboard`
 - `GET /session/{id}/results`
 
+### Demo API
+- `GET /demo/start` (seeds demo questions + session + mock players in one call)
+
 ### DSA insights API
 - `GET /dsa/insights`
 
@@ -115,10 +119,14 @@ curl http://localhost:8080/dsa/insights
 ## 8) Frontend Features
 
 - Multi-screen flow (Home, Create, Join, Lobby, Live, Results)
+- One-click **Start Demo Quiz** button (no manual setup)
 - Loading indicators and better error messages
+- Dynamic polling (Lobby `3s`, Live `2s`, Leaderboard `1.5s`)
 - Top-3 leaderboard highlighting
 - Result stats: average score, rank, difficulty impact, LIS trends
 - DSA Insights panel for viva explanation
+- DSA working toggle + runtime signal text
+- Final Thank You screen for polished presentation
 
 ## 9) Run Locally
 
@@ -145,6 +153,7 @@ mvn test
 
 ### Build and run with compose
 ```bash
+cp .env.example .env
 docker compose up --build
 ```
 
@@ -160,10 +169,19 @@ docker run -p 8080:8080 \
   -e DB_URL=jdbc:mysql://<host>:3306/quiz_platform \
   -e DB_USERNAME=<user> \
   -e DB_PASSWORD=<password> \
+  -e SERVER_PORT=8080 \
   quiz-platform
 ```
 
-## 12) Viva Notes (quick explanation)
+## 12) 🎥 Demo Mode (1-click)
+
+1. Start app (`mvn spring-boot:run` or Docker).
+2. Open `http://localhost:8080`.
+3. Click **Start Demo Quiz**.
+4. Session + quiz + mock players are auto-created in under 10 seconds.
+5. Click **Start Quiz** in lobby and present full live flow.
+
+## 13) 🧠 DSA Explanation (simple)
 
 - **BST** is used for question retrieval so lookups scale with tree height (`O(h)`).
 - **Heap** powers rank extraction so leaderboard is always sorted by score.
@@ -171,7 +189,21 @@ docker run -p 8080:8080 \
 - **Knapsack DP** demonstrates optimization, and **LIS DP** demonstrates trend analysis.
 - **Segment Tree** provides efficient score range aggregation for analytics.
 
-## 13) Screenshot
+## 14) 📸 Screenshots (UI flow)
 
-Live UI screenshot:
+Suggested flow captures for submission:
+- Home + Demo button
+- Lobby with live player count
+- Live question + timer + leaderboard top-3
+- Results + performance stats
+- Thank You screen
+
+Live UI screenshot sample:
 - https://github.com/user-attachments/assets/6bead3e0-a69e-47c9-9c72-ee1da0bab0b2
+
+## 15) 🎯 Why this project stands out
+
+- Full-stack, production-style architecture with persistent state.
+- Clear, demonstrable DSA-to-feature mapping for viva.
+- End-to-end live quiz flow with demo mode for instant presentation.
+- Deployable with Docker and environment-driven configuration.

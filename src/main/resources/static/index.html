@@ -20,7 +20,9 @@
             <div class="actions">
                 <button onclick="showScreen('create')">Host Quiz</button>
                 <button class="ghost" onclick="showScreen('join')">Join Quiz</button>
+                <button class="demo" onclick="startDemoQuiz()">Start Demo Quiz</button>
             </div>
+            <p id="demo-message" class="status"></p>
             <div class="info-grid">
                 <article>
                     <h3>DSA Mapping</h3>
@@ -39,7 +41,15 @@
                 </article>
                 <article>
                     <h3>DSA Insights Panel</h3>
+                    <label class="toggle">
+                        <input id="dsa-working-toggle" type="checkbox" onchange="toggleDsaWorking()" />
+                        Show DSA Working
+                    </label>
                     <pre id="insights-output">Click refresh to load...</pre>
+                    <div id="insights-flow-wrapper" style="display:none;">
+                        <pre id="insights-flow"></pre>
+                        <p id="dsa-live-status" class="status"></p>
+                    </div>
                     <button class="small" onclick="loadDsaInsights()">Refresh DSA insights</button>
                 </article>
             </div>
@@ -111,7 +121,17 @@
             <h3>Performance Trend (LIS)</h3>
             <pre id="result-lis"></pre>
             <div class="actions">
-                <button onclick="showScreen('home')">Back Home</button>
+                <button onclick="showThankYou()">Finish</button>
+                <button class="ghost" onclick="showScreen('home')">Back Home</button>
+            </div>
+        </section>
+
+        <section id="screen-thanks" class="screen">
+            <h2>Thank You 🎉</h2>
+            <p class="muted">Demo completed successfully. Your Quiz Platform is presentation-ready.</p>
+            <div class="actions">
+                <button onclick="showScreen('home')">Back to Home</button>
+                <button class="ghost" onclick="startDemoQuiz()">Run Demo Again</button>
             </div>
         </section>
     </main>
