@@ -59,7 +59,11 @@ export const GlassModal = ({ open, onClose, title, children }: GlassModalProps) 
 
       const currentFocusable = Array.from(
         container.querySelectorAll<HTMLElement>(FOCUS_SELECTOR)
-      ).filter((element) => !element.hasAttribute("disabled"));
+      ).filter(
+        (element) =>
+          !element.hasAttribute("disabled") &&
+          element.getAttribute("aria-disabled") !== "true"
+      );
 
       if (currentFocusable.length === 0) {
         event.preventDefault();
