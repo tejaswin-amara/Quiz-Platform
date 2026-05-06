@@ -94,14 +94,14 @@ export const GlassModal = ({ open, onClose, title, children }: GlassModalProps) 
   if (!open) return null;
 
   return (
-    <Overlay onMouseDown={onClose}>
+    <Overlay onClick={onClose}>
       <ModalBox
         ref={modalRef}
         role="dialog"
         aria-modal="true"
         aria-label={title}
         tabIndex={-1}
-        onMouseDown={(event) => event.stopPropagation()}
+        onClick={(event) => event.stopPropagation()}
       >
         {children}
       </ModalBox>
