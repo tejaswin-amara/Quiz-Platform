@@ -1,8 +1,9 @@
 import React from "react";
 import styled from "styled-components";
+import { motion, useScroll, useMotionValue, useReducedMotion } from "framer-motion";
 import { glassSurface } from "./glassSurface";
 
-const HeaderRoot = styled.header`
+const HeaderRoot = styled(motion.header)`
   position: sticky;
   top: 0;
   z-index: 10;
@@ -39,11 +40,26 @@ export interface GlassHeaderProps {
   actions?: React.ReactNode;
 }
 
-export const GlassHeader = ({ title, actions }: GlassHeaderProps) => (
-  <HeaderRoot>
-    <HeaderInner>
-      <Title>{title}</Title>
-      <Actions aria-label="Header actions">{actions}</Actions>
-    </HeaderInner>
-  </HeaderRoot>
-);
+function GlassHeaderInner({ title, actions }: GlassHeaderProps) {
+  const prefersReduced = useReducedMotion();
+  const { scrollY } = useScroll();
+  const opacity = useMotionValue(1);
+
+  React.useEffect(() => {
+    if (prefersReduced) return;
+    return scrollY.on("change", (y: number) => {
+      opacity.set(Math.max(0.7, 1 - y / 400));
+    });
+  }, [scrollY, opacity, prefersReduced]);
+
+  return (
+    <HeaderRoot style={{ opacity: prefersReduced ? 1 : opacity }}>
+      <HeaderInner>
+        <Title>{title}</Title>
+        <Actions aria-label="Header actions">{actions}</Actions>
+      </HeaderInner>
+    </HeaderRoot>
+  );
+}
+
+export const GlassHeader = React.memo(GlassHeaderInner);

@@ -1,19 +1,20 @@
-import React, { useEffect, useRef } from "react";
+import React, { useEffect, useRef, useState } from "react";
 import styled from "styled-components";
+import { motion, AnimatePresence, useReducedMotion } from "framer-motion";
 import { glassSurface } from "./glassSurface";
 
-const Overlay = styled.div`
+const OverlayBase = styled(motion.div)`
   position: fixed;
   inset: 0;
   z-index: 20;
-  background: ${({ theme }) => theme.colors.overlay};
+  background: var(--glass-overlay);
   display: flex;
   align-items: center;
   justify-content: center;
   padding: 16px;
 `;
 
-const ModalBox = styled.div`
+const ModalBoxBase = styled(motion.div)`
   ${glassSurface};
   width: min(560px, 100%);
   max-height: min(85vh, 720px);
@@ -23,21 +24,38 @@ const ModalBox = styled.div`
   gap: 16px;
 `;
 
+const Announcement = styled.div`
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip: rect(0 0 0 0);
+  white-space: nowrap;
+`;
+
 export interface GlassModalProps {
   open: boolean;
   onClose: () => void;
   title: string;
   children: React.ReactNode;
+  announcement?: string;
 }
 
 const FOCUS_SELECTOR =
   'a[href], button:not([disabled]), textarea, input, select, [tabindex]:not([tabindex="-1"])';
 
-export const GlassModal = ({ open, onClose, title, children }: GlassModalProps) => {
+export const GlassModal = ({ open, onClose, title, children, announcement }: GlassModalProps) => {
   const modalRef = useRef<HTMLDivElement>(null);
+  const [liveMessage, setLiveMessage] = useState("");
+  const prefersReduced = useReducedMotion();
 
   useEffect(() => {
     if (!open) return;
+
+    const root = document.getElementById("root");
+    if (root) root.setAttribute("aria-hidden", "true");
+
+    if (announcement) setLiveMessage(announcement);
 
     const previousFocused = document.activeElement as HTMLElement | null;
     const container = modalRef.current;
@@ -87,24 +105,51 @@ export const GlassModal = ({ open, onClose, title, children }: GlassModalProps) 
     document.addEventListener("keydown", handleKeyDown);
     return () => {
       document.removeEventListener("keydown", handleKeyDown);
+      if (root) root.removeAttribute("aria-hidden");
       previousFocused?.focus();
     };
-  }, [open, onClose]);
+  }, [open, onClose, announcement]);
 
-  if (!open) return null;
+  const overlayVariants = prefersReduced
+    ? {}
+    : { hidden: { opacity: 0 }, visible: { opacity: 1 }, exit: { opacity: 0 } };
+
+  const modalVariants = prefersReduced
+    ? {}
+    : { hidden: { opacity: 0, scale: 0.92 }, visible: { opacity: 1, scale: 1 }, exit: { opacity: 0, scale: 0.92 } };
 
   return (
-    <Overlay onClick={onClose}>
-      <ModalBox
-        ref={modalRef}
-        role="dialog"
-        aria-modal="true"
-        aria-label={title}
-        tabIndex={-1}
-        onClick={(event) => event.stopPropagation()}
-      >
-        {children}
-      </ModalBox>
-    </Overlay>
+    <>
+      <Announcement aria-live="polite" aria-atomic="true">{liveMessage}</Announcement>
+      <AnimatePresence>
+        {open && (
+          <OverlayBase
+            key="modal-overlay"
+            variants={overlayVariants}
+            initial="hidden"
+            animate="visible"
+            exit="exit"
+            transition={{ duration: 0.2 }}
+            onClick={onClose}
+          >
+            <ModalBoxBase
+              ref={modalRef}
+              role="dialog"
+              aria-modal="true"
+              aria-label={title}
+              tabIndex={-1}
+              variants={modalVariants}
+              initial="hidden"
+              animate="visible"
+              exit="exit"
+              transition={{ duration: 0.2 }}
+              onClick={(event: React.MouseEvent) => event.stopPropagation()}
+            >
+              {children}
+            </ModalBoxBase>
+          </OverlayBase>
+        )}
+      </AnimatePresence>
+    </>
   );
 };
