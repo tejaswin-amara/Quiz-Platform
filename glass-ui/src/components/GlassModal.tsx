@@ -1,7 +1,8 @@
 import React, { useEffect, useRef, useState } from "react";
 import styled from "styled-components";
-import { motion, AnimatePresence, useReducedMotion } from "framer-motion";
+import { motion, AnimatePresence } from "framer-motion";
 import { glassSurface } from "./glassSurface";
+import { usePrefersReducedMotion } from "../hooks/usePrefersReducedMotion";
 
 const OverlayBase = styled(motion.div)`
   position: fixed;
@@ -47,7 +48,7 @@ const FOCUS_SELECTOR =
 export const GlassModal = ({ open, onClose, title, children, announcement }: GlassModalProps) => {
   const modalRef = useRef<HTMLDivElement>(null);
   const [liveMessage, setLiveMessage] = useState("");
-  const prefersReduced = useReducedMotion();
+  const prefersReduced = usePrefersReducedMotion();
 
   useEffect(() => {
     if (!open) return;
@@ -111,11 +112,11 @@ export const GlassModal = ({ open, onClose, title, children, announcement }: Gla
   }, [open, onClose, announcement]);
 
   const overlayVariants = prefersReduced
-    ? {}
+    ? undefined
     : { hidden: { opacity: 0 }, visible: { opacity: 1 }, exit: { opacity: 0 } };
 
   const modalVariants = prefersReduced
-    ? {}
+    ? undefined
     : { hidden: { opacity: 0, scale: 0.92 }, visible: { opacity: 1, scale: 1 }, exit: { opacity: 0, scale: 0.92 } };
 
   return (
@@ -126,9 +127,9 @@ export const GlassModal = ({ open, onClose, title, children, announcement }: Gla
           <OverlayBase
             key="modal-overlay"
             variants={overlayVariants}
-            initial="hidden"
-            animate="visible"
-            exit="exit"
+            initial={prefersReduced ? undefined : "hidden"}
+            animate={prefersReduced ? undefined : "visible"}
+            exit={prefersReduced ? undefined : "exit"}
             transition={{ duration: 0.2 }}
             onClick={onClose}
           >
@@ -139,9 +140,9 @@ export const GlassModal = ({ open, onClose, title, children, announcement }: Gla
               aria-label={title}
               tabIndex={-1}
               variants={modalVariants}
-              initial="hidden"
-              animate="visible"
-              exit="exit"
+              initial={prefersReduced ? undefined : "hidden"}
+              animate={prefersReduced ? undefined : "visible"}
+              exit={prefersReduced ? undefined : "exit"}
               transition={{ duration: 0.2 }}
               onClick={(event: React.MouseEvent) => event.stopPropagation()}
             >

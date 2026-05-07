@@ -1,7 +1,8 @@
 import React from "react";
 import styled from "styled-components";
-import { motion, useScroll, useMotionValue, useReducedMotion } from "framer-motion";
+import { motion, useScroll, useMotionValue } from "framer-motion";
 import { glassSurface } from "./glassSurface";
+import { usePrefersReducedMotion } from "../hooks/usePrefersReducedMotion";
 
 const HeaderRoot = styled(motion.header)`
   position: sticky;
@@ -41,7 +42,7 @@ export interface GlassHeaderProps {
 }
 
 function GlassHeaderInner({ title, actions }: GlassHeaderProps) {
-  const prefersReduced = useReducedMotion();
+  const prefersReduced = usePrefersReducedMotion();
   const { scrollY } = useScroll();
   const opacity = useMotionValue(1);
 

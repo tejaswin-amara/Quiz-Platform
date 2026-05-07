@@ -20,3 +20,6 @@ export { GlassBadge } from "./GlassBadge";
 export type { GlassBadgeProps, BadgeVariant } from "./GlassBadge";
 
 export { glassSurface } from "./glassSurface";
+
+export { lightTheme, darkTheme } from "../theme";
+export { GlobalStyles } from "../globalStyles";

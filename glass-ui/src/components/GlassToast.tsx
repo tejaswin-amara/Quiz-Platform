@@ -1,6 +1,7 @@
 import React, { useEffect, useState } from "react";
 import styled, { css } from "styled-components";
 import { motion, AnimatePresence } from "framer-motion";
+import { usePrefersReducedMotion } from "../hooks/usePrefersReducedMotion";
 
 export type ToastType = "info" | "success" | "warning" | "error";
 
@@ -25,7 +26,12 @@ const ToastRoot = styled(motion.div)<{ $type: ToastType }>`
   color: var(--glass-text);
   font-size: 0.9rem;
   max-width: 360px;
-  ${({ $type }) => typeStyles[$type]};
+  ${({ $type }: { $type: ToastType }) => typeStyles[$type]};
+
+  @supports not (backdrop-filter: blur(1px)) {
+    background: ${({ theme }) => theme.colors.bg};
+    opacity: 0.98;
+  }
 `;
 
 export interface GlassToastProps {
@@ -37,6 +43,7 @@ export interface GlassToastProps {
 
 export const GlassToast = ({ message, type = "info", duration = 4000, onDismiss }: GlassToastProps) => {
   const [visible, setVisible] = useState(true);
+  const prefersReduced = usePrefersReducedMotion();
 
   useEffect(() => {
     if (duration <= 0) return;
@@ -54,10 +61,10 @@ export const GlassToast = ({ message, type = "info", duration = 4000, onDismiss 
           <ToastRoot
             $type={type}
             role="status"
-            initial={{ opacity: 0, y: 24 }}
-            animate={{ opacity: 1, y: 0 }}
-            exit={{ opacity: 0, y: 24 }}
-            transition={{ duration: 0.25 }}
+            initial={prefersReduced ? undefined : { opacity: 0, y: 24 }}
+            animate={prefersReduced ? undefined : { opacity: 1, y: 0 }}
+            exit={prefersReduced ? undefined : { opacity: 0, y: 24 }}
+            transition={prefersReduced ? undefined : { duration: 0.25 }}
           >
             {message}
           </ToastRoot>

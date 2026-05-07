@@ -19,7 +19,7 @@ const BadgeRoot = styled.span<{ $variant: BadgeVariant }>`
   font-size: 0.75rem;
   font-weight: 600;
   line-height: 1.6;
-  ${({ $variant }) => variantStyles[$variant]};
+  ${({ $variant }: { $variant: BadgeVariant }) => variantStyles[$variant]};
 `;
 
 export interface GlassBadgeProps extends React.ComponentPropsWithoutRef<"span"> {

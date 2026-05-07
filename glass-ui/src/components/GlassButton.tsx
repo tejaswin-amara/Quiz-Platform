@@ -1,6 +1,7 @@
 import React from "react";
 import styled, { css } from "styled-components";
 import { motion } from "framer-motion";
+import { usePrefersReducedMotion } from "../hooks/usePrefersReducedMotion";
 
 export type ButtonVariant = "primary" | "ghost" | "danger";
 export type ButtonSize = "sm" | "md" | "lg";
@@ -39,8 +40,8 @@ const ButtonRoot = styled(motion.button)<{ $variant: ButtonVariant; $size: Butto
   cursor: pointer;
   transition: filter 0.15s ease;
 
-  ${({ $variant }) => variantStyles[$variant]};
-  ${({ $size }) => sizeStyles[$size]};
+  ${({ $variant }: { $variant: ButtonVariant }) => variantStyles[$variant]};
+  ${({ $size }: { $size: ButtonSize }) => sizeStyles[$size]};
 
   &:disabled {
     opacity: 0.5;
@@ -60,13 +61,14 @@ export const GlassButton = React.memo(function GlassButton({
   children,
   ...rest
 }: GlassButtonProps) {
+  const prefersReduced = usePrefersReducedMotion();
   return (
     <ButtonRoot
       $variant={variant}
       $size={size}
-      whileHover={{ scale: 1.03 }}
-      whileTap={{ scale: 0.97 }}
-      transition={{ duration: 0.15 }}
+      whileHover={prefersReduced ? undefined : { scale: 1.03 }}
+      whileTap={prefersReduced ? undefined : { scale: 0.97 }}
+      transition={prefersReduced ? undefined : { duration: 0.15 }}
       {...(rest as any)}
     >
       {children}

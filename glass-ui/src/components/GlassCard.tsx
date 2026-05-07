@@ -2,6 +2,7 @@ import React from "react";
 import styled, { css } from "styled-components";
 import { motion } from "framer-motion";
 import { glassSurface } from "./glassSurface";
+import { usePrefersReducedMotion } from "../hooks/usePrefersReducedMotion";
 
 type CardSize = "sm" | "md" | "lg";
 
@@ -13,7 +14,7 @@ const sizeStyles = {
 
 const CardRoot = styled(motion.section)<{ $size: CardSize }>`
   ${glassSurface};
-  ${({ $size }) => sizeStyles[$size]};
+  ${({ $size }: { $size: CardSize }) => sizeStyles[$size]};
   display: grid;
   contain: layout style;
 `;
@@ -24,10 +25,11 @@ export interface GlassCardProps extends React.ComponentPropsWithoutRef<"section"
 }
 
 export const GlassCard = React.memo(function GlassCard({ size = "md", children, ...rest }: GlassCardProps) {
+  const prefersReduced = usePrefersReducedMotion();
   return (
     <CardRoot
       $size={size}
-      whileHover={{ y: -4, transition: { duration: 0.2 } }}
+      whileHover={prefersReduced ? undefined : { y: -4, transition: { duration: 0.2 } }}
       {...(rest as any)}
     >
       {children}

@@ -1,6 +1,7 @@
 import React, { useId, useState } from "react";
 import styled from "styled-components";
 import { motion, AnimatePresence } from "framer-motion";
+import { usePrefersReducedMotion } from "../hooks/usePrefersReducedMotion";
 
 const Wrapper = styled.span`
   position: relative;
@@ -25,6 +26,11 @@ const TooltipBox = styled(motion.div)`
   color: var(--glass-text);
   pointer-events: none;
   z-index: 50;
+
+  @supports not (backdrop-filter: blur(1px)) {
+    background: ${({ theme }) => theme.colors.bg};
+    opacity: 0.98;
+  }
 `;
 
 export interface GlassTooltipProps {
@@ -35,6 +41,7 @@ export interface GlassTooltipProps {
 export const GlassTooltip = ({ label, children }: GlassTooltipProps) => {
   const id = useId();
   const [show, setShow] = useState(false);
+  const prefersReduced = usePrefersReducedMotion();
 
   const childProps = {
     "aria-describedby": show ? id : undefined,
@@ -52,10 +59,10 @@ export const GlassTooltip = ({ label, children }: GlassTooltipProps) => {
           <TooltipBox
             id={id}
             role="tooltip"
-            initial={{ opacity: 0, y: -4 }}
-            animate={{ opacity: 1, y: 0 }}
-            exit={{ opacity: 0, y: -4 }}
-            transition={{ duration: 0.15 }}
+            initial={prefersReduced ? undefined : { opacity: 0, y: -4 }}
+            animate={prefersReduced ? undefined : { opacity: 1, y: 0 }}
+            exit={prefersReduced ? undefined : { opacity: 0, y: -4 }}
+            transition={prefersReduced ? undefined : { duration: 0.15 }}
           >
             {label}
           </TooltipBox>
