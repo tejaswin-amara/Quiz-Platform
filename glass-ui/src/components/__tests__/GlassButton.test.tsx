@@ -34,7 +34,12 @@ describe("GlassButton", () => {
 
   it("does not fire click when disabled", () => {
     const onClick = jest.fn();
-    render(<GlassButton disabled onClick={onClick}>Disabled</GlassButton>, { wrapper });
+    render(
+      <GlassButton disabled onClick={onClick}>
+        Disabled
+      </GlassButton>,
+      { wrapper }
+    );
     userEvent.click(screen.getByRole("button", { name: "Disabled" }));
     expect(onClick).not.toHaveBeenCalled();
   });

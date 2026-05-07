@@ -4,10 +4,26 @@ import styled, { css } from "styled-components";
 export type BadgeVariant = "default" | "success" | "warning" | "danger";
 
 const variantStyles: Record<BadgeVariant, ReturnType<typeof css>> = {
-  default: css`background: var(--glass-surface); border-color: var(--glass-border); color: var(--glass-text);`,
-  success: css`background: rgba(34, 197, 94, 0.2); border-color: rgba(34, 197, 94, 0.4); color: #16a34a;`,
-  warning: css`background: rgba(251, 191, 36, 0.2); border-color: rgba(251, 191, 36, 0.4); color: #ca8a04;`,
-  danger: css`background: rgba(239, 68, 68, 0.2); border-color: rgba(239, 68, 68, 0.4); color: #dc2626;`,
+  default: css`
+    background: var(--glass-surface);
+    border-color: var(--glass-border);
+    color: var(--glass-text);
+  `,
+  success: css`
+    background: rgba(34, 197, 94, 0.2);
+    border-color: rgba(34, 197, 94, 0.4);
+    color: #16a34a;
+  `,
+  warning: css`
+    background: rgba(251, 191, 36, 0.2);
+    border-color: rgba(251, 191, 36, 0.4);
+    color: #ca8a04;
+  `,
+  danger: css`
+    background: rgba(239, 68, 68, 0.2);
+    border-color: rgba(239, 68, 68, 0.4);
+    color: #dc2626;
+  `,
 };
 
 const BadgeRoot = styled.span<{ $variant: BadgeVariant }>`

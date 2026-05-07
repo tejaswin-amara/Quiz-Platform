@@ -1,217 +1,177 @@
-# Glass UI
+# glass-ui
 
-A React glassmorphism component library built with TypeScript, styled-components, and framer-motion.
+[![npm version](https://img.shields.io/npm/v/glass-ui.svg)](https://www.npmjs.com/package/glass-ui)
+[![CI](https://github.com/tejaswin-amara/Quiz-Platform/actions/workflows/glass-ui-ci.yml/badge.svg)](https://github.com/tejaswin-amara/Quiz-Platform/actions/workflows/glass-ui-ci.yml)
+[![License: MIT](https://img.shields.io/badge/license-MIT-blue.svg)](./LICENSE)
+[![Storybook](https://img.shields.io/badge/storybook-ready-ff4785.svg)](#storybook)
+
+Enterprise-grade glassmorphism UI components for React + TypeScript, with styled-components, motion safety, and accessibility-first defaults.
+
+## Architecture overview
+
+- **UI primitives:** `GlassCard`, `GlassHeader`, `GlassModal`, `GlassButton`, `GlassToast`, `GlassTooltip`, `GlassBadge`
+- **Styling layer:** shared `glassSurface` mixin + CSS variables emitted by `GlobalStyles`
+- **Theming:** `lightTheme` and `darkTheme`, with custom theme support via `ThemeProvider`
+- **Animation:** Framer Motion with `prefers-reduced-motion` safeguards
+- **Packaging:** ESM + CJS + declaration files built by `tsup`
 
 ## Installation
 
+### npm
+
 ```bash
 npm install glass-ui styled-components framer-motion
-# Peer deps: react@^18, react-dom@^18
 ```
 
-## Setup
+### pnpm
 
-Wrap your app with `ThemeProvider` and render `GlobalStyles`:
+```bash
+pnpm add glass-ui styled-components framer-motion
+```
+
+### yarn
+
+```bash
+yarn add glass-ui styled-components framer-motion
+```
+
+### CDN (ESM)
+
+```html
+<script type="module">
+  import { GlassCard } from "https://esm.sh/glass-ui";
+</script>
+```
+
+## Usage
 
 ```tsx
 import { ThemeProvider } from "styled-components";
-import { GlobalStyles, lightTheme, darkTheme } from "glass-ui";
+import { GlobalStyles, lightTheme, GlassCard, GlassButton } from "glass-ui";
 
-function App() {
+export function App() {
   return (
     <ThemeProvider theme={lightTheme}>
       <GlobalStyles />
-      {/* your app */}
+      <GlassCard>
+        <h2>glass-ui</h2>
+        <GlassButton>Continue</GlassButton>
+      </GlassCard>
     </ThemeProvider>
   );
 }
 ```
 
-## Components
+## Theming guide
 
-### GlassCard
+`GlobalStyles` exports these CSS variables globally:
 
-Frosted glass container. Optional `size` prop: `"sm" | "md" | "lg"` (default: `"md"`).
+- `--glass-bg`
+- `--glass-surface`
+- `--glass-border`
+- `--glass-text`
+- `--glass-accent`
+- `--glass-overlay`
+- `--glass-blur`
+- `--glass-radius`
+- `--glass-shadow`
 
-```tsx
-import { GlassCard } from "glass-ui";
+Use custom themes by providing a `DefaultTheme`-compatible object to `ThemeProvider`.
 
-<GlassCard size="md">
-  <h2>Hello World</h2>
-  <p>Content inside the card.</p>
-</GlassCard>
+## SSR notes
+
+- Components are SSR-safe.
+- Motion preference checks guard against missing `window.matchMedia`.
+- Render `GlobalStyles` on both server and client to avoid visual drift.
+
+## Accessibility guarantees
+
+- Modal focus trap + restore, ESC close, and root isolation (`aria-hidden`)
+- Tooltip semantics with `role="tooltip"` + `aria-describedby`
+- Toast announcements with `aria-live="assertive"`
+- Visible keyboard focus ring
+- Motion reduction support for both CSS and Framer Motion paths
+
+## Browser support
+
+| Browser | Version |
+| ------- | ------- |
+| Chrome  | 76+     |
+| Safari  | 9+      |
+| Firefox | 103+    |
+| Edge    | 79+     |
+
+Fallbacks are applied when `backdrop-filter` is unavailable.
+
+## Bundle and performance
+
+- ESM/CJS outputs with tree-shakable exports
+- Shared style primitives to reduce duplicate CSS
+- Reduced-motion no-op variants for animation-heavy paths
+- Build bundle details: run `npm run build:lib`
+
+## Storybook
+
+```bash
+npm run storybook
 ```
 
-### GlassHeader
+Includes:
 
-Sticky glassmorphism navbar with scroll-based opacity animation.
+- Dark/light toolbar switch
+- Reduced-motion preview toggle
+- A11y checks via `@storybook/addon-a11y`
 
-```tsx
-import { GlassHeader } from "glass-ui";
+## Development scripts
 
-<GlassHeader
-  title="My App"
-  actions={<button>Settings</button>}
-/>
+```bash
+npm run lint
+npm run format:check
+npm test -- --watchAll=false
+npm run build
+npm run build:lib
+npm run build-storybook
 ```
 
-### GlassModal
+## Release workflow
 
-Accessible modal dialog with focus trap, ESC close, outside-click close, and `aria-hidden` on `#root`.
+1. Update `CHANGELOG.md`
+2. Bump version with semantic versioning
+3. Tag release (`glass-ui-vX.Y.Z`)
+4. Publish with provenance via GitHub Actions release workflow
 
-```tsx
-import { GlassModal } from "glass-ui";
+## SemVer policy
 
-<GlassModal open={open} onClose={() => setOpen(false)} title="My Modal">
-  <p>Modal content here.</p>
-  <button onClick={() => setOpen(false)}>Close</button>
-</GlassModal>
-```
+- `patch`: fixes and internal hardening
+- `minor`: backward-compatible features
+- `major`: breaking API changes
 
-| Prop | Type | Description |
-|------|------|-------------|
-| `open` | `boolean` | Show/hide modal |
-| `onClose` | `() => void` | Called on ESC or overlay click |
-| `title` | `string` | ARIA label for dialog |
-| `announcement` | `string?` | Message for `aria-live="polite"` region |
+## Contribution workflow
 
-### GlassButton
+See [CONTRIBUTING.md](./CONTRIBUTING.md), [SECURITY.md](./SECURITY.md), and [CODE_OF_CONDUCT.md](./CODE_OF_CONDUCT.md).
 
-```tsx
-import { GlassButton } from "glass-ui";
+## FAQ
 
-<GlassButton variant="primary" size="md">Click Me</GlassButton>
-<GlassButton variant="ghost">Cancel</GlassButton>
-<GlassButton variant="danger">Delete</GlassButton>
-```
+### Is this library tree-shakeable?
 
-| Prop | Type | Default |
-|------|------|---------|
-| `variant` | `"primary" \| "ghost" \| "danger"` | `"primary"` |
-| `size` | `"sm" \| "md" \| "lg"` | `"md"` |
+Yes. Use ESM imports for best results.
 
-### GlassToast
+### Does it support React StrictMode?
 
-Auto-dismissing notification toast with `aria-live="assertive"`.
+Yes, components are StrictMode compatible.
 
-```tsx
-import { GlassToast } from "glass-ui";
+### Does it work with CRA and Vite?
 
-<GlassToast message="Saved!" type="success" duration={3000} onDismiss={() => {}} />
-```
+Yes, both are supported.
 
-| Prop | Type | Default |
-|------|------|---------|
-| `type` | `"info" \| "success" \| "warning" \| "error"` | `"info"` |
-| `duration` | `number` (ms) | `4000` |
+## Troubleshooting
 
-### GlassTooltip
+- **Styles not applied:** Ensure `GlobalStyles` is rendered.
+- **Theme mismatch:** Confirm `ThemeProvider` wraps your app.
+- **Animation issues in tests:** Ensure `matchMedia` is mocked in test setup.
 
-Hover + focus triggered tooltip. Uses `role="tooltip"` and `aria-describedby`.
+## Screenshots / GIF placeholders
 
-```tsx
-import { GlassTooltip } from "glass-ui";
-
-<GlassTooltip label="Opens settings panel">
-  <button>⚙</button>
-</GlassTooltip>
-```
-
-### GlassBadge
-
-Inline pill badge.
-
-```tsx
-import { GlassBadge } from "glass-ui";
-
-<GlassBadge variant="success">Active</GlassBadge>
-<GlassBadge variant="danger">Error</GlassBadge>
-```
-
-| `variant` | Values |
-|-----------|--------|
-| | `"default" \| "success" \| "warning" \| "danger"` |
-
-## Theming
-
-### ThemeProvider (source of truth)
-
-Themes are plain JS objects matching `DefaultTheme`. The `GlobalStyles` component emits CSS custom properties from the active theme on `:root`, so both styled-components interpolations and raw CSS can consume them.
-
-```ts
-import { lightTheme, darkTheme } from "glass-ui";
-```
-
-### Available CSS Variables
-
-Once `GlobalStyles` is rendered, these variables are available globally:
-
-| Variable | Description |
-|----------|-------------|
-| `--glass-bg` | Page background |
-| `--glass-surface` | Glass fill color |
-| `--glass-border` | Glass border color |
-| `--glass-text` | Body text color |
-| `--glass-accent` | Accent / primary color |
-| `--glass-overlay` | Modal overlay color |
-| `--glass-blur` | Backdrop blur amount |
-| `--glass-radius` | Border radius |
-| `--glass-shadow` | Box shadow |
-
-### Custom Theme
-
-```ts
-import { DefaultTheme } from "styled-components";
-
-const myTheme: DefaultTheme = {
-  colors: {
-    bg: "#ffffff",
-    glass: "rgba(255,255,255,0.3)",
-    border: "rgba(255,255,255,0.5)",
-    text: "#111111",
-    accent: "#6366f1",
-    overlay: "rgba(0,0,0,0.4)",
-  },
-  blur: "16px",
-  radius: "20px",
-  shadow: "0 8px 32px rgba(0,0,0,0.12)",
-};
-```
-
-## Accessibility Guarantees
-
-- All focus management handled by `GlassModal` (focus trap + restore on close)
-- `GlassModal` applies `aria-hidden="true"` to `#root` when open
-- `aria-live="polite"` announcement region in `GlassModal`
-- `GlassToast` uses `aria-live="assertive"` for critical notifications
-- `GlassTooltip` uses `role="tooltip"` and `aria-describedby`
-- `:focus-visible` ring using `--glass-accent`
-- `prefers-reduced-motion` disables all CSS animations
-
-## Browser Support
-
-| Browser | Version | Notes |
-|---------|---------|-------|
-| Chrome | 76+ | Full `backdrop-filter` support |
-| Safari | 9+ | Full `-webkit-backdrop-filter` support |
-| Firefox | 103+ | `backdrop-filter` support (enabled by default) |
-| Edge | 79+ | Full support (Chromium-based) |
-| Firefox < 103 | — | Falls back to opaque background via `@supports not` |
-
-## Performance Notes
-
-- `will-change: transform` on all glass surfaces for GPU compositing
-- `contain: layout style` on `GlassCard` to limit reflow scope
-- `React.memo` on `GlassCard`, `GlassHeader`, `GlassButton`, `GlassBadge`
-- Animation variants are no-ops when `prefers-reduced-motion` is set
-- CSS custom properties avoid re-rendering on theme switch for static consumers
-
-## Available Scripts
-
-| Command | Description |
-|---------|-------------|
-| `npm start` | Start CRA dev server |
-| `npm test` | Run Jest tests |
-| `npm run build:lib` | Build library with tsup (ESM + CJS + types) |
-| `npm run storybook` | Start Storybook dev server on port 6006 |
-| `npm run build-storybook` | Build static Storybook |
+- `docs/screenshots/light-mode.png`
+- `docs/screenshots/dark-mode.png`
+- `docs/gifs/components-demo.gif`

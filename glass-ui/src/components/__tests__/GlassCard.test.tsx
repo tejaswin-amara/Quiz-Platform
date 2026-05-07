@@ -10,7 +10,12 @@ const wrapper = ({ children }: { children: React.ReactNode }) => (
 
 describe("GlassCard", () => {
   it("renders children", () => {
-    render(<GlassCard><span>Hello</span></GlassCard>, { wrapper });
+    render(
+      <GlassCard>
+        <span>Hello</span>
+      </GlassCard>,
+      { wrapper }
+    );
     expect(screen.getByText("Hello")).toBeInTheDocument();
   });
 
@@ -20,17 +25,32 @@ describe("GlassCard", () => {
   });
 
   it("renders with size=sm", () => {
-    render(<GlassCard size="sm" data-testid="card-sm">Small</GlassCard>, { wrapper });
+    render(
+      <GlassCard size="sm" data-testid="card-sm">
+        Small
+      </GlassCard>,
+      { wrapper }
+    );
     expect(screen.getByTestId("card-sm")).toBeInTheDocument();
   });
 
   it("renders with size=md", () => {
-    render(<GlassCard size="md" data-testid="card-md">Medium</GlassCard>, { wrapper });
+    render(
+      <GlassCard size="md" data-testid="card-md">
+        Medium
+      </GlassCard>,
+      { wrapper }
+    );
     expect(screen.getByTestId("card-md")).toBeInTheDocument();
   });
 
   it("renders with size=lg", () => {
-    render(<GlassCard size="lg" data-testid="card-lg">Large</GlassCard>, { wrapper });
+    render(
+      <GlassCard size="lg" data-testid="card-lg">
+        Large
+      </GlassCard>,
+      { wrapper }
+    );
     expect(screen.getByTestId("card-lg")).toBeInTheDocument();
   });
 });

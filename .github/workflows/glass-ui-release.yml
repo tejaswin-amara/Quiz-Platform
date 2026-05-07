@@ -1,0 +1,43 @@
+name: glass-ui-release
+
+on:
+  push:
+    tags:
+      - "glass-ui-v*"
+  workflow_dispatch:
+
+permissions:
+  contents: write
+  id-token: write
+
+concurrency:
+  group: glass-ui-release-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  release:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: glass-ui
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          registry-url: https://registry.npmjs.org
+          cache: npm
+          cache-dependency-path: glass-ui/package-lock.json
+      - run: npm ci
+      - run: npm run lint
+      - run: npm run test -- --watchAll=false
+      - run: npm run build
+      - run: npm run build:lib
+      - run: npm run build-storybook
+      - run: npm publish --provenance --access public
+        env:
+          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
+      - name: Create GitHub Release
+        uses: softprops/action-gh-release@v2
+        with:
+          generate_release_notes: true

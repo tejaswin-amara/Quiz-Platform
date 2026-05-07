@@ -15,10 +15,7 @@ describe("GlassHeader", () => {
   });
 
   it("renders the actions slot", () => {
-    render(
-      <GlassHeader title="My App" actions={<button>Settings</button>} />,
-      { wrapper }
-    );
+    render(<GlassHeader title="My App" actions={<button>Settings</button>} />, { wrapper });
     expect(screen.getByRole("button", { name: "Settings" })).toBeInTheDocument();
   });
 });

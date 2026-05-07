@@ -1,4 +1,4 @@
-import '@testing-library/jest-dom';
+import "@testing-library/jest-dom";
 
 // Mock window.matchMedia for framer-motion and other consumers
 const matchMediaMock = (query: string) => ({
@@ -12,7 +12,7 @@ const matchMediaMock = (query: string) => ({
   dispatchEvent: jest.fn(),
 });
 
-Object.defineProperty(window, 'matchMedia', {
+Object.defineProperty(window, "matchMedia", {
   writable: true,
   configurable: true,
   value: jest.fn().mockImplementation(matchMediaMock),

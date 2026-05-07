@@ -1,0 +1,2 @@
+#!/usr/bin/env sh
+npx --prefix glass-ui --no -- commitlint --config glass-ui/commitlint.config.cjs --edit "$1"

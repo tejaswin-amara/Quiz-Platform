@@ -1,27 +1,72 @@
 {
   "name": "glass-ui",
   "version": "1.0.0",
-  "private": true,
-  "main": "dist/index.js",
-  "module": "dist/index.mjs",
-  "types": "dist/index.d.ts",
-  "files": ["dist"],
-  "dependencies": {
-    "@testing-library/dom": "^10.4.1",
-    "@testing-library/jest-dom": "^6.9.1",
-    "@testing-library/react": "^16.3.2",
-    "@testing-library/user-event": "^13.5.0",
-    "@types/jest": "^27.5.2",
-    "@types/node": "^16.18.126",
-    "@types/react": "^18.3.28",
-    "@types/react-dom": "^18.3.7",
-    "@types/styled-components": "^5.1.36",
+  "private": false,
+  "description": "A React + styled-components glassmorphism UI component library.",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/tejaswin-amara/Quiz-Platform.git",
+    "directory": "glass-ui"
+  },
+  "homepage": "https://github.com/tejaswin-amara/Quiz-Platform/tree/main/glass-ui",
+  "main": "./dist/components/index.js",
+  "module": "./dist/components/index.mjs",
+  "types": "./dist/components/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./dist/components/index.d.ts",
+      "import": "./dist/components/index.mjs",
+      "require": "./dist/components/index.js"
+    },
+    "./theme": {
+      "types": "./dist/theme.d.ts",
+      "import": "./dist/theme.mjs",
+      "require": "./dist/theme.js"
+    },
+    "./globalStyles": {
+      "types": "./dist/globalStyles.d.ts",
+      "import": "./dist/globalStyles.mjs",
+      "require": "./dist/globalStyles.js"
+    },
+    "./package.json": "./package.json"
+  },
+  "sideEffects": false,
+  "files": [
+    "dist",
+    "README.md",
+    "CHANGELOG.md",
+    "LICENSE"
+  ],
+  "engines": {
+    "node": ">=18.18.0"
+  },
+  "funding": {
+    "type": "github",
+    "url": "https://github.com/sponsors/tejaswin-amara"
+  },
+  "publishConfig": {
+    "access": "public",
+    "provenance": true
+  },
+  "keywords": [
+    "react",
+    "typescript",
+    "styled-components",
+    "framer-motion",
+    "glassmorphism",
+    "ui-library",
+    "design-system",
+    "a11y",
+    "storybook"
+  ],
+  "peerDependencies": {
     "framer-motion": "^12.38.0",
-    "react": "^18.3.1",
-    "react-dom": "^18.3.1",
-    "react-scripts": "5.0.1",
-    "styled-components": "^6.4.1",
-    "typescript": "^4.9.5",
+    "react": "^18.0.0 || ^19.0.0",
+    "react-dom": "^18.0.0 || ^19.0.0",
+    "styled-components": "^6.0.0"
+  },
+  "dependencies": {
     "web-vitals": "^2.1.4"
   },
   "scripts": {
@@ -29,9 +74,24 @@
     "build": "react-scripts build",
     "build:lib": "tsup",
     "test": "react-scripts test",
+    "lint": "eslint \"src/**/*.{ts,tsx}\" --max-warnings=0",
+    "lint:fix": "eslint \"src/**/*.{ts,tsx}\" --fix",
+    "typecheck": "tsc --noEmit",
+    "format": "prettier --write \"{src,.storybook}/**/*.{ts,tsx,md,css}\" \"*.{json,md}\"",
+    "format:check": "prettier --check \"{src,.storybook}/**/*.{ts,tsx,md,css}\" \"*.{json,md}\"",
     "eject": "react-scripts eject",
     "storybook": "storybook dev -p 6006",
-    "build-storybook": "storybook build"
+    "build-storybook": "storybook build",
+    "prepare": "cd .. && husky glass-ui/.husky",
+    "prepack": "npm run lint && npm run test -- --watchAll=false && npm run build:lib"
+  },
+  "lint-staged": {
+    "*.{ts,tsx,js,jsx,css,md,json,yml,yaml}": [
+      "prettier --write"
+    ],
+    "src/**/*.{ts,tsx}": [
+      "eslint --fix --max-warnings=0"
+    ]
   },
   "eslintConfig": {
     "extends": [
@@ -52,14 +112,34 @@
     ]
   },
   "devDependencies": {
+    "@commitlint/cli": "^19.8.1",
+    "@commitlint/config-conventional": "^19.8.1",
     "@storybook/addon-a11y": "^10.3.6",
     "@storybook/addon-docs": "^10.3.6",
     "@storybook/addon-onboarding": "^10.3.6",
     "@storybook/preset-create-react-app": "^10.3.6",
     "@storybook/react-webpack5": "^10.3.6",
+    "@testing-library/dom": "^10.4.1",
+    "@testing-library/jest-dom": "^6.9.1",
+    "@testing-library/react": "^16.3.2",
+    "@testing-library/user-event": "^13.5.0",
+    "@types/jest": "^27.5.2",
+    "@types/node": "^16.18.126",
+    "@types/react": "^18.3.28",
+    "@types/react-dom": "^18.3.7",
+    "@types/styled-components": "^5.1.36",
+    "eslint": "^8.57.1",
+    "eslint-config-prettier": "^10.1.8",
+    "husky": "^9.1.7",
+    "lint-staged": "^16.2.4",
+    "prettier": "^3.6.2",
     "prop-types": "^15.8.1",
+    "react": "^18.3.1",
+    "react-dom": "^18.3.1",
+    "react-scripts": "5.0.1",
     "storybook": "^10.3.6",
     "tsup": "^8.5.1",
+    "typescript": "^4.9.5",
     "webpack": "^5.106.2"
   }
 }

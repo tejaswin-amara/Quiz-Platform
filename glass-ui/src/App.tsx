@@ -70,7 +70,8 @@ export default function App() {
           <GlassCard>
             <Heading>GlassCard</Heading>
             <Paragraph>
-              Frosted translucent container with shared blur tokens, soft shadows, and responsive spacing.
+              Frosted translucent container with shared blur tokens, soft shadows, and responsive
+              spacing.
             </Paragraph>
             <Button type="button" aria-label="Open modal" onClick={() => setOpen(true)}>
               Open Modal
@@ -80,7 +81,8 @@ export default function App() {
           <GlassCard>
             <Heading>GlassHeader</Heading>
             <Paragraph>
-              Sticky navbar using the same glass surface layer for visual consistency and improved performance.
+              Sticky navbar using the same glass surface layer for visual consistency and improved
+              performance.
             </Paragraph>
           </GlassCard>
         </Grid>

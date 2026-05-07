@@ -7,9 +7,21 @@ import { usePrefersReducedMotion } from "../hooks/usePrefersReducedMotion";
 type CardSize = "sm" | "md" | "lg";
 
 const sizeStyles = {
-  sm: css`padding: 16px; gap: 12px; width: min(100%, 360px);`,
-  md: css`padding: 24px; gap: 16px; width: min(100%, 560px);`,
-  lg: css`padding: 32px; gap: 20px; width: min(100%, 760px);`,
+  sm: css`
+    padding: 16px;
+    gap: 12px;
+    width: min(100%, 360px);
+  `,
+  md: css`
+    padding: 24px;
+    gap: 16px;
+    width: min(100%, 560px);
+  `,
+  lg: css`
+    padding: 32px;
+    gap: 20px;
+    width: min(100%, 760px);
+  `,
 };
 
 const CardRoot = styled(motion.section)<{ $size: CardSize }>`
@@ -24,7 +36,11 @@ export interface GlassCardProps extends React.ComponentPropsWithoutRef<"section"
   children?: React.ReactNode;
 }
 
-export const GlassCard = React.memo(function GlassCard({ size = "md", children, ...rest }: GlassCardProps) {
+export const GlassCard = React.memo(function GlassCard({
+  size = "md",
+  children,
+  ...rest
+}: GlassCardProps) {
   const prefersReduced = usePrefersReducedMotion();
   return (
     <CardRoot

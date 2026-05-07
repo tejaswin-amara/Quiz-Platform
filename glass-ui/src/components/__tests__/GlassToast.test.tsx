@@ -15,7 +15,9 @@ describe("GlassToast", () => {
   });
 
   it("supports all types", () => {
-    const { rerender } = render(<GlassToast message="Info" type="info" duration={0} />, { wrapper });
+    const { rerender } = render(<GlassToast message="Info" type="info" duration={0} />, {
+      wrapper,
+    });
     expect(screen.getByRole("status")).toBeInTheDocument();
 
     rerender(

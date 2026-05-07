@@ -6,10 +6,22 @@ import { usePrefersReducedMotion } from "../hooks/usePrefersReducedMotion";
 export type ToastType = "info" | "success" | "warning" | "error";
 
 const typeStyles: Record<ToastType, ReturnType<typeof css>> = {
-  info: css`background: rgba(91, 140, 255, 0.25); border-color: rgba(91, 140, 255, 0.4);`,
-  success: css`background: rgba(34, 197, 94, 0.25); border-color: rgba(34, 197, 94, 0.4);`,
-  warning: css`background: rgba(251, 191, 36, 0.25); border-color: rgba(251, 191, 36, 0.4);`,
-  error: css`background: rgba(239, 68, 68, 0.25); border-color: rgba(239, 68, 68, 0.4);`,
+  info: css`
+    background: rgba(91, 140, 255, 0.25);
+    border-color: rgba(91, 140, 255, 0.4);
+  `,
+  success: css`
+    background: rgba(34, 197, 94, 0.25);
+    border-color: rgba(34, 197, 94, 0.4);
+  `,
+  warning: css`
+    background: rgba(251, 191, 36, 0.25);
+    border-color: rgba(251, 191, 36, 0.4);
+  `,
+  error: css`
+    background: rgba(239, 68, 68, 0.25);
+    border-color: rgba(239, 68, 68, 0.4);
+  `,
 };
 
 const ToastRoot = styled(motion.div)<{ $type: ToastType }>`
@@ -41,7 +53,12 @@ export interface GlassToastProps {
   onDismiss?: () => void;
 }
 
-export const GlassToast = ({ message, type = "info", duration = 4000, onDismiss }: GlassToastProps) => {
+export const GlassToast = ({
+  message,
+  type = "info",
+  duration = 4000,
+  onDismiss,
+}: GlassToastProps) => {
   const [visible, setVisible] = useState(true);
   const prefersReduced = usePrefersReducedMotion();
 

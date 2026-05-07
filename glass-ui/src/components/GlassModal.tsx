@@ -62,9 +62,7 @@ export const GlassModal = ({ open, onClose, title, children, announcement }: Gla
     const container = modalRef.current;
     if (!container) return;
 
-    const focusables = Array.from(
-      container.querySelectorAll<HTMLElement>(FOCUS_SELECTOR)
-    );
+    const focusables = Array.from(container.querySelectorAll<HTMLElement>(FOCUS_SELECTOR));
     (focusables[0] ?? container).focus();
 
     const handleKeyDown = (event: KeyboardEvent) => {
@@ -80,8 +78,7 @@ export const GlassModal = ({ open, onClose, title, children, announcement }: Gla
         container.querySelectorAll<HTMLElement>(FOCUS_SELECTOR)
       ).filter(
         (element) =>
-          !element.hasAttribute("disabled") &&
-          element.getAttribute("aria-disabled") !== "true"
+          !element.hasAttribute("disabled") && element.getAttribute("aria-disabled") !== "true"
       );
 
       if (currentFocusable.length === 0) {
@@ -117,11 +114,17 @@ export const GlassModal = ({ open, onClose, title, children, announcement }: Gla
 
   const modalVariants = prefersReduced
     ? undefined
-    : { hidden: { opacity: 0, scale: 0.92 }, visible: { opacity: 1, scale: 1 }, exit: { opacity: 0, scale: 0.92 } };
+    : {
+        hidden: { opacity: 0, scale: 0.92 },
+        visible: { opacity: 1, scale: 1 },
+        exit: { opacity: 0, scale: 0.92 },
+      };
 
   return (
     <>
-      <Announcement aria-live="polite" aria-atomic="true">{liveMessage}</Announcement>
+      <Announcement aria-live="polite" aria-atomic="true">
+        {liveMessage}
+      </Announcement>
       <AnimatePresence>
         {open && (
           <OverlayBase

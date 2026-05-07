@@ -76,7 +76,9 @@ describe("GlassModal", () => {
     renderModal();
     const buttons = screen.getAllByRole("button");
     // Focus the last button, Tab should wrap to first
-    act(() => { buttons[buttons.length - 1].focus(); });
+    act(() => {
+      buttons[buttons.length - 1].focus();
+    });
     userEvent.tab();
     expect(document.activeElement).toBe(buttons[0]);
   });
@@ -84,7 +86,9 @@ describe("GlassModal", () => {
   it("restores focus on close", () => {
     const trigger = document.createElement("button");
     document.body.appendChild(trigger);
-    act(() => { trigger.focus(); });
+    act(() => {
+      trigger.focus();
+    });
 
     const { rerender } = renderModal({ open: true });
     rerender(

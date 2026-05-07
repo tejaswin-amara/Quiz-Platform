@@ -7,9 +7,21 @@ export type ButtonVariant = "primary" | "ghost" | "danger";
 export type ButtonSize = "sm" | "md" | "lg";
 
 const sizeStyles: Record<ButtonSize, ReturnType<typeof css>> = {
-  sm: css`padding: 6px 12px; font-size: 0.8rem; border-radius: 8px;`,
-  md: css`padding: 10px 16px; font-size: 0.9rem; border-radius: 12px;`,
-  lg: css`padding: 14px 24px; font-size: 1rem; border-radius: 14px;`,
+  sm: css`
+    padding: 6px 12px;
+    font-size: 0.8rem;
+    border-radius: 8px;
+  `,
+  md: css`
+    padding: 10px 16px;
+    font-size: 0.9rem;
+    border-radius: 12px;
+  `,
+  lg: css`
+    padding: 14px 24px;
+    font-size: 1rem;
+    border-radius: 14px;
+  `,
 };
 
 const variantStyles: Record<ButtonVariant, ReturnType<typeof css>> = {
