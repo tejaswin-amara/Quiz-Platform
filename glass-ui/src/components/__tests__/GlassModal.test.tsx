@@ -9,6 +9,24 @@ const wrapper = ({ children }: { children: React.ReactNode }) => (
   <ThemeProvider theme={lightTheme}>{children}</ThemeProvider>
 );
 
+const originalMatchMedia = window.matchMedia;
+
+const enableReducedMotion = () => {
+  const matchMediaMock = jest.fn().mockImplementation((query: string) => ({
+    matches: query === "(prefers-reduced-motion: reduce)",
+    media: query,
+    onchange: null,
+    addListener: jest.fn(),
+    removeListener: jest.fn(),
+    addEventListener: jest.fn(),
+    removeEventListener: jest.fn(),
+    dispatchEvent: jest.fn(),
+  }));
+
+  window.matchMedia = matchMediaMock as typeof window.matchMedia;
+  (global as any).matchMedia = matchMediaMock;
+};
+
 const renderModal = (props: Partial<React.ComponentProps<typeof GlassModal>> = {}) => {
   const defaultProps = {
     open: true,
@@ -36,6 +54,8 @@ describe("GlassModal", () => {
 
   afterEach(() => {
     document.body.removeChild(rootDiv);
+    window.matchMedia = originalMatchMedia;
+    (global as any).matchMedia = originalMatchMedia;
   });
 
   it("renders when open=true", () => {
@@ -118,5 +138,24 @@ describe("GlassModal", () => {
       </ThemeProvider>
     );
     expect(rootDiv).not.toHaveAttribute("aria-hidden");
+  });
+
+  it("disables modal animation props when reduced motion is preferred", () => {
+    enableReducedMotion();
+    renderModal({ open: true });
+
+    const dialog = screen.getByRole("dialog");
+    const overlay = dialog.parentElement;
+
+    expect(dialog).not.toHaveAttribute("data-motion-initial");
+    expect(dialog).not.toHaveAttribute("data-motion-animate");
+    expect(dialog).not.toHaveAttribute("data-motion-exit");
+    expect(dialog).not.toHaveAttribute("data-motion-variants");
+    expect(dialog).not.toHaveAttribute("data-motion-transition");
+    expect(overlay).not.toHaveAttribute("data-motion-initial");
+    expect(overlay).not.toHaveAttribute("data-motion-animate");
+    expect(overlay).not.toHaveAttribute("data-motion-exit");
+    expect(overlay).not.toHaveAttribute("data-motion-variants");
+    expect(overlay).not.toHaveAttribute("data-motion-transition");
   });
 });

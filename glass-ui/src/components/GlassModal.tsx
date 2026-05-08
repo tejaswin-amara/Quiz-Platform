@@ -133,7 +133,7 @@ export const GlassModal = ({ open, onClose, title, children, announcement }: Gla
             initial={prefersReduced ? undefined : "hidden"}
             animate={prefersReduced ? undefined : "visible"}
             exit={prefersReduced ? undefined : "exit"}
-            transition={{ duration: 0.2 }}
+            transition={prefersReduced ? undefined : { duration: 0.2 }}
             onClick={onClose}
           >
             <ModalBoxBase
@@ -146,7 +146,7 @@ export const GlassModal = ({ open, onClose, title, children, announcement }: Gla
               initial={prefersReduced ? undefined : "hidden"}
               animate={prefersReduced ? undefined : "visible"}
               exit={prefersReduced ? undefined : "exit"}
-              transition={{ duration: 0.2 }}
+              transition={prefersReduced ? undefined : { duration: 0.2 }}
               onClick={(event: React.MouseEvent) => event.stopPropagation()}
             >
               {children}
