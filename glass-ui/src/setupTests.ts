@@ -1,39 +1,67 @@
-import React from "react";
 import "@testing-library/jest-dom";
 
-const MOTION_PROP_NAMES = [
-  "animate",
-  "exit",
-  "initial",
-  "layout",
-  "transition",
-  "variants",
-  "whileHover",
-  "whileTap",
-];
-
-const toDataAttribute = (propName: string) =>
-  `data-motion-${propName.replace(/[A-Z]/g, (match) => `-${match.toLowerCase()}`)}`;
-
-const createMotionComponent = (tag: string) =>
-  React.forwardRef<HTMLElement, Record<string, unknown>>(function MotionComponent(props, ref) {
-    const motionProps = Object.fromEntries(
-      Object.entries(props)
-        .filter(([key, value]) => MOTION_PROP_NAMES.includes(key) && value !== undefined)
-        .map(([key, value]) => [
-          toDataAttribute(key),
-          typeof value === "string" ? value : JSON.stringify(value),
-        ])
-    );
-
-    const domProps = Object.fromEntries(
-      Object.entries(props).filter(([key]) => !MOTION_PROP_NAMES.includes(key))
-    );
-
-    return React.createElement(tag, { ref, ...domProps, ...motionProps });
-  });
-
 jest.mock("framer-motion", () => {
+  const React: typeof import("react") = require("react");
+  const motionPropNames = [
+    "animate",
+    "exit",
+    "initial",
+    "layout",
+    "transition",
+    "variants",
+    "whileHover",
+    "whileTap",
+  ];
+  const normalizeStyle = (style: Record<string, unknown> | undefined) =>
+    Object.fromEntries(
+      Object.entries(style ?? {}).map(([key, value]) => [
+        key,
+        value &&
+        typeof value === "object" &&
+        "get" in value &&
+        typeof (value as { get: () => unknown }).get === "function"
+          ? (value as { get: () => unknown }).get()
+          : value,
+      ])
+    );
+  const toDataAttribute = (propName: string) =>
+    `data-motion-${propName.replace(/[A-Z]/g, (match) => `-${match.toLowerCase()}`)}`;
+  const createMotionComponent = (tag: string) =>
+    React.forwardRef(function MotionComponent(
+      props: Record<string, unknown>,
+      ref: React.ForwardedRef<HTMLElement>
+    ) {
+      const motionProps = Object.fromEntries(
+        Object.entries(props)
+          .filter(([key, value]) => motionPropNames.includes(key) && value !== undefined)
+          .map(([key, value]) => [
+            toDataAttribute(key),
+            typeof value === "string" ? value : JSON.stringify(value),
+          ])
+      );
+
+      const domProps = Object.fromEntries(
+        Object.entries(props).filter(([key]) => !motionPropNames.includes(key))
+      );
+
+      return React.createElement(tag, {
+        ref,
+        ...domProps,
+        style: normalizeStyle(domProps.style as Record<string, unknown> | undefined),
+        ...motionProps,
+      });
+    });
+  const useMotionValue = (initialValue: number) => {
+    let value = initialValue;
+
+    return {
+      get: () => value,
+      set: (nextValue: number) => {
+        value = nextValue;
+      },
+      on: jest.fn(() => jest.fn()),
+    };
+  };
   const motion = new Proxy(
     {},
     {
@@ -46,6 +74,12 @@ jest.mock("framer-motion", () => {
     AnimatePresence: ({ children }: { children: React.ReactNode }) =>
       React.createElement(React.Fragment, null, children),
     motion,
+    useMotionValue,
+    useScroll: () => ({
+      scrollY: {
+        on: jest.fn(() => jest.fn()),
+      },
+    }),
   };
 });
 
