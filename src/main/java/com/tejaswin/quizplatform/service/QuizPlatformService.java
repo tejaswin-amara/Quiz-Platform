@@ -15,6 +15,7 @@ import com.tejaswin.quizplatform.persistence.repository.QuizRepository;
 import com.tejaswin.quizplatform.persistence.repository.QuizResultRepository;
 import jakarta.annotation.PostConstruct;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
 import java.time.Instant;
 import java.util.ArrayList;
@@ -67,6 +68,7 @@ public class QuizPlatformService {
     }
 
     @PostConstruct
+    @Transactional
     void loadPersistedData() {
         for (QuestionEntity entity : questionRepository.findAll()) {
             Question question = mapQuestion(entity);
@@ -83,6 +85,7 @@ public class QuizPlatformService {
         }
     }
 
+    @Transactional
     public synchronized Question addQuestion(Question question) {
         validateQuestion(question);
         allQuestions.put(question.id(), question);
@@ -92,6 +95,7 @@ public class QuizPlatformService {
         return question;
     }
 
+    @Transactional
     public synchronized Quiz createQuiz(String title, List<Long> questionIds) {
         if (title == null || title.isBlank()) {
             throw new IllegalArgumentException("Quiz title is required");
@@ -121,6 +125,7 @@ public class QuizPlatformService {
         return quiz;
     }
 
+    @Transactional
     public synchronized Map<String, String> joinQuiz(String code, String participantName) {
         ensureQuizExists(code);
         if (participantName == null || participantName.isBlank()) {
@@ -142,6 +147,7 @@ public class QuizPlatformService {
                 .toList();
     }
 
+    @Transactional
     public synchronized Map<String, Object> submitAnswers(String code, String participantId, Map<Long, Integer> answers) {
         Quiz quiz = ensureQuizExists(code);
         if (participantId == null || participantId.isBlank()) {
@@ -216,6 +222,7 @@ public class QuizPlatformService {
         return questionBST.inorderTraversal();
     }
 
+    @Transactional
     public synchronized void deleteQuestion(long id) {
         allQuestions.remove(id);
         questionBST.delete(id);

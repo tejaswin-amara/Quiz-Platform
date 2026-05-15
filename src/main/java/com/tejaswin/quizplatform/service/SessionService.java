@@ -15,6 +15,7 @@ import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
 import java.time.Instant;
 import java.util.ArrayList;
@@ -29,6 +30,7 @@ import java.util.stream.Collectors;
 public class SessionService {
     private static final Logger log = LoggerFactory.getLogger(SessionService.class);
     private static final int POINTS_PER_DIFFICULTY_LEVEL = 10;
+    private static final long TOUCH_PERSIST_THROTTLE_MS = 5000L;
 
     private final QuizPlatformService quizPlatformService;
     private final LeaderboardService leaderboardService;
@@ -61,20 +63,29 @@ public class SessionService {
         this.expiryMinutes = expiryMinutes;
     }
 
-    public synchronized Map<String, Object> createSession(String title, List<Long> questionIds, Integer questionDurationSeconds) {
+    @Transactional
+    public Map<String, Object> createSession(Long hostUserId, String title, List<Long> questionIds, Integer questionDurationSeconds) {
+        if (hostUserId == null) {
+            throw new IllegalArgumentException("Authenticated host user is required");
+        }
         Quiz quiz = quizPlatformService.createQuiz(title, questionIds);
         String sessionId = "S" + UUID.randomUUID().toString().replace("-", "").substring(0, 8).toUpperCase();
 
+        long now = System.currentTimeMillis();
         SessionEntity session = new SessionEntity();
         session.setSessionId(sessionId);
         session.setQuizCode(quiz.code());
+        session.setHostUserId(hostUserId);
         session.setState("LOBBY");
         session.setQuestionDurationSeconds(Math.max(5, questionDurationSeconds == null ? defaultQuestionDurationSeconds : questionDurationSeconds));
         session.setStartEpochMs(null);
-        session.setLastActivityEpochMs(System.currentTimeMillis());
+        session.setPausedAtEpochMs(null);
+        session.setForcedQuestionIndex(null);
+        session.setLastPersistedTouchEpochMs(now);
+        session.setLastActivityEpochMs(now);
         sessionRepository.save(session);
 
-        log.info("event=session_created sessionId={} quizCode={} durationSec={}", sessionId, quiz.code(), session.getQuestionDurationSeconds());
+        log.info("event=session_created sessionId={} quizCode={} hostUserId={} durationSec={}", sessionId, quiz.code(), hostUserId, session.getQuestionDurationSeconds());
 
         return Map.of(
                 "sessionId", sessionId,
@@ -83,14 +94,15 @@ public class SessionService {
         );
     }
 
-    public synchronized Map<String, Object> startDemoSession() {
+    @Transactional
+    public Map<String, Object> startDemoSession(Long hostUserId) {
         ensureDemoQuestions();
-        Map<String, Object> created = createSession("Demo DSA Quiz", DEMO_QUESTION_IDS, 10);
+        Map<String, Object> created = createSession(hostUserId, "Demo DSA Quiz", DEMO_QUESTION_IDS, 10);
         String sessionId = String.valueOf(created.get("sessionId"));
 
         List<Map<String, Object>> joinedPlayers = new ArrayList<>();
         for (String name : DEMO_PLAYERS) {
-            joinedPlayers.add(joinSession(sessionId, name));
+            joinedPlayers.add(joinSession(sessionId, name, null));
         }
 
         return new LinkedHashMap<>(Map.of(
@@ -103,10 +115,11 @@ public class SessionService {
         ));
     }
 
-    public synchronized Map<String, Object> joinSession(String sessionId, String participantName) {
+    @Transactional
+    public Map<String, Object> joinSession(String sessionId, String participantName, Long userId) {
         SessionEntity session = ensureSessionExists(sessionId);
         if (!"LOBBY".equals(session.getState())) {
-            throw new IllegalStateException("Session already started");
+            throw new IllegalStateException("Session is not accepting joins");
         }
         if (participantName == null || participantName.isBlank()) {
             throw new IllegalArgumentException("participantName is required");
@@ -120,13 +133,14 @@ public class SessionService {
         PlayerEntity player = new PlayerEntity();
         player.setParticipantId(participantId);
         player.setSessionId(sessionId);
+        player.setUserId(userId);
         player.setParticipantName(normalizedName);
         player.setScore(0);
         player.setScoreHistoryCsv("0");
         playerRepository.save(player);
 
-        touchSession(session);
-        log.info("event=session_joined sessionId={} participantId={} participantName={}", sessionId, participantId, normalizedName);
+        touchSession(session, true);
+        log.info("event=session_joined sessionId={} participantId={} participantName={} userId={}", sessionId, participantId, normalizedName, userId);
 
         return Map.of(
                 "sessionId", sessionId,
@@ -136,20 +150,26 @@ public class SessionService {
         );
     }
 
-    public synchronized Map<String, Object> getSessionQuestion(String sessionId, boolean start) {
+    @Transactional
+    public Map<String, Object> getSessionQuestion(String sessionId, boolean start, Long callerUserId) {
         SessionEntity session = ensureSessionExists(sessionId);
+
         if ("LOBBY".equals(session.getState()) && start) {
+            requireHostOwner(session, callerUserId);
             if (playerRepository.countBySessionId(sessionId) == 0) {
                 throw new IllegalStateException("Cannot start without participants");
             }
             session.setState("LIVE");
-            session.setStartEpochMs(System.currentTimeMillis());
+            long now = System.currentTimeMillis();
+            session.setStartEpochMs(now);
+            session.setPausedAtEpochMs(null);
+            session.setForcedQuestionIndex(0L);
             sessionRepository.save(session);
             log.info("event=session_started sessionId={} participants={}", sessionId, playerRepository.countBySessionId(sessionId));
         }
 
         updateSessionState(session);
-        touchSession(session);
+        touchSession(session, false);
 
         if (!"LIVE".equals(session.getState())) {
             List<String> players = playerRepository.findBySessionId(sessionId).stream()
@@ -189,7 +209,8 @@ public class SessionService {
         );
     }
 
-    public synchronized Map<String, Object> submitSessionAnswer(String sessionId, String participantId, int answerOption) {
+    @Transactional
+    public Map<String, Object> submitSessionAnswer(String sessionId, String participantId, int answerOption) {
         if (participantId == null || participantId.isBlank()) {
             throw new IllegalArgumentException("participantId is required");
         }
@@ -239,7 +260,7 @@ public class SessionService {
         result.setSubmittedAt(Instant.now());
         resultRepository.save(result);
 
-        touchSession(session);
+        touchSession(session, false);
         log.info(
                 "event=session_answer_submitted sessionId={} participantId={} questionId={} correct={} score={}",
                 sessionId,
@@ -258,9 +279,9 @@ public class SessionService {
         );
     }
 
-    public synchronized List<LeaderboardEntry> sessionLeaderboard(String sessionId) {
+    @Transactional(readOnly = true)
+    public List<LeaderboardEntry> sessionLeaderboard(String sessionId) {
         SessionEntity session = ensureSessionExists(sessionId);
-        touchSession(session);
 
         List<PlayerEntity> players = playerRepository.findBySessionId(sessionId);
         Map<String, Integer> scores = new HashMap<>();
@@ -271,14 +292,13 @@ public class SessionService {
         }
 
         List<LeaderboardEntry> ranked = leaderboardService.rank(scores, names);
-        log.info("event=session_leaderboard_updated sessionId={} leaderboardSize={}", sessionId, ranked.size());
+        log.info("event=session_leaderboard_updated sessionId={} leaderboardSize={}", session.getSessionId(), ranked.size());
         return ranked;
     }
 
-    public synchronized Map<String, Object> sessionResults(String sessionId) {
+    @Transactional(readOnly = true)
+    public Map<String, Object> sessionResults(String sessionId) {
         SessionEntity session = ensureSessionExists(sessionId);
-        updateSessionState(session);
-        touchSession(session);
 
         List<LeaderboardEntry> leaderboard = sessionLeaderboard(sessionId);
         int totalScoreRange = analyticsService.totalScoreRange(leaderboard);
@@ -329,8 +349,120 @@ public class SessionService {
         ));
     }
 
+    @Transactional
+    public Map<String, Object> pauseSession(String sessionId, Long callerUserId) {
+        SessionEntity session = ensureSessionExists(sessionId);
+        requireHostOwner(session, callerUserId);
+        if (!"LIVE".equals(session.getState())) {
+            throw new IllegalStateException("Only LIVE sessions can be paused");
+        }
+        session.setState("PAUSED");
+        session.setPausedAtEpochMs(System.currentTimeMillis());
+        touchSession(session, true);
+        return Map.of("sessionId", sessionId, "state", session.getState());
+    }
+
+    @Transactional
+    public Map<String, Object> resumeSession(String sessionId, Long callerUserId) {
+        SessionEntity session = ensureSessionExists(sessionId);
+        requireHostOwner(session, callerUserId);
+        if (!"PAUSED".equals(session.getState())) {
+            throw new IllegalStateException("Only PAUSED sessions can be resumed");
+        }
+        long now = System.currentTimeMillis();
+        if (session.getPausedAtEpochMs() != null && session.getStartEpochMs() != null) {
+            long pausedDuration = now - session.getPausedAtEpochMs();
+            session.setStartEpochMs(session.getStartEpochMs() + pausedDuration);
+        }
+        session.setPausedAtEpochMs(null);
+        session.setState("LIVE");
+        touchSession(session, true);
+        return Map.of("sessionId", sessionId, "state", session.getState());
+    }
+
+    @Transactional
+    public Map<String, Object> endSession(String sessionId, Long callerUserId) {
+        SessionEntity session = ensureSessionExists(sessionId);
+        requireHostOwner(session, callerUserId);
+        session.setState("COMPLETED");
+        touchSession(session, true);
+        return Map.of("sessionId", sessionId, "state", session.getState());
+    }
+
+    @Transactional
+    public Map<String, Object> closeLobby(String sessionId, Long callerUserId) {
+        SessionEntity session = ensureSessionExists(sessionId);
+        requireHostOwner(session, callerUserId);
+        if (!"LOBBY".equals(session.getState())) {
+            throw new IllegalStateException("Lobby can only be closed before start");
+        }
+        session.setState("COMPLETED");
+        touchSession(session, true);
+        return Map.of("sessionId", sessionId, "state", session.getState());
+    }
+
+    @Transactional
+    public Map<String, Object> forceNextQuestion(String sessionId, Long callerUserId) {
+        SessionEntity session = ensureSessionExists(sessionId);
+        requireHostOwner(session, callerUserId);
+        if (!"LIVE".equals(session.getState())) {
+            throw new IllegalStateException("Session must be LIVE to force next question");
+        }
+        List<Question> questions = quizPlatformService.getQuizQuestions(session.getQuizCode());
+        int currentIndex = currentQuestionIndex(session, questions.size());
+        int nextIndex = Math.min(currentIndex + 1, Math.max(0, questions.size() - 1));
+        session.setForcedQuestionIndex((long) nextIndex);
+        session.setStartEpochMs(System.currentTimeMillis() - ((long) nextIndex * session.getQuestionDurationSeconds() * 1000L));
+        touchSession(session, true);
+        return Map.of("sessionId", sessionId, "forcedQuestionIndex", nextIndex, "state", session.getState());
+    }
+
+    @Transactional
+    public Map<String, Object> removeParticipant(String sessionId, String participantKey, Long callerUserId) {
+        SessionEntity session = ensureSessionExists(sessionId);
+        requireHostOwner(session, callerUserId);
+
+        PlayerEntity player = playerRepository.findByParticipantIdAndSessionId(participantKey, sessionId)
+                .or(() -> playerRepository.findBySessionIdAndParticipantNameIgnoreCase(sessionId, participantKey))
+                .orElseThrow(() -> new NotFoundException("Participant not found in session"));
+
+        resultRepository.deleteBySessionIdAndParticipantId(sessionId, player.getParticipantId());
+        playerRepository.deleteByParticipantIdAndSessionId(player.getParticipantId(), sessionId);
+        touchSession(session, true);
+
+        return Map.of(
+                "sessionId", sessionId,
+                "removedParticipantId", player.getParticipantId(),
+                "removedParticipantName", player.getParticipantName(),
+                "state", session.getState()
+        );
+    }
+
+    @Transactional(readOnly = true)
+    public Map<String, Object> reviewAnswers(String sessionId, int questionIndex, Long callerUserId) {
+        SessionEntity session = ensureSessionExists(sessionId);
+        requireHostOwner(session, callerUserId);
+
+        List<Map<String, Object>> answers = resultRepository.findBySessionIdAndQuestionIndex(sessionId, questionIndex).stream()
+                .map(result -> Map.<String, Object>of(
+                        "participantId", result.getParticipantId(),
+                        "questionId", result.getQuestionId(),
+                        "correct", result.getCorrect(),
+                        "scoreAfterAnswer", result.getScoreAfterAnswer(),
+                        "submittedAt", result.getSubmittedAt()
+                ))
+                .toList();
+
+        return Map.of(
+                "sessionId", sessionId,
+                "questionIndex", questionIndex,
+                "answers", answers
+        );
+    }
+
     @Scheduled(fixedDelayString = "${quiz.session.cleanup-interval-ms:60000}")
-    public synchronized void cleanupExpiredSessions() {
+    @Transactional
+    public void cleanupExpiredSessions() {
         long now = System.currentTimeMillis();
         long expiryMillis = expiryMinutes * 60_000L;
         List<SessionEntity> expired = sessionRepository.findByLastActivityEpochMsLessThan(now - expiryMillis);
@@ -357,6 +489,11 @@ public class SessionService {
     }
 
     private int currentQuestionIndex(SessionEntity session, int totalQuestions) {
+        if (session.getForcedQuestionIndex() != null) {
+            int forced = session.getForcedQuestionIndex().intValue();
+            int maxIndex = Math.max(0, totalQuestions - 1);
+            return Math.max(0, Math.min(forced, maxIndex));
+        }
         int elapsedSeconds = (int) ((System.currentTimeMillis() - safeStartEpoch(session)) / 1000L);
         int index = elapsedSeconds / session.getQuestionDurationSeconds();
         int maxIndex = Math.max(0, totalQuestions - 1);
@@ -372,14 +509,24 @@ public class SessionService {
         return session.getStartEpochMs() == null ? System.currentTimeMillis() : session.getStartEpochMs();
     }
 
-    private void touchSession(SessionEntity session) {
-        session.setLastActivityEpochMs(System.currentTimeMillis());
-        sessionRepository.save(session);
+    private void touchSession(SessionEntity session, boolean forcePersist) {
+        long now = System.currentTimeMillis();
+        session.setLastActivityEpochMs(now);
+        if (forcePersist || session.getLastPersistedTouchEpochMs() == null || (now - session.getLastPersistedTouchEpochMs()) >= TOUCH_PERSIST_THROTTLE_MS) {
+            session.setLastPersistedTouchEpochMs(now);
+            sessionRepository.save(session);
+        }
     }
 
     private SessionEntity ensureSessionExists(String sessionId) {
         return sessionRepository.findById(sessionId)
                 .orElseThrow(() -> new NotFoundException("Session not found: " + sessionId));
+    }
+
+    private void requireHostOwner(SessionEntity session, Long callerUserId) {
+        if (callerUserId == null || !callerUserId.equals(session.getHostUserId())) {
+            throw new IllegalStateException("Only session host can perform this operation");
+        }
     }
 
     private List<Integer> parseHistory(String csv) {

@@ -65,6 +65,12 @@ Production-hardened Spring Boot quiz platform with live sessions, demo mode, and
 - `GET /api/recommendations?topic=Arrays&mode=bfs|dfs|topo`
 - `GET /api/complexities`
 
+### Auth API (`/auth`)
+- `POST /auth/register` → creates user (`USER` or `HOST`) and returns JWT
+- `POST /auth/login` → returns JWT for existing user
+
+Use `Authorization: Bearer <token>` for protected APIs.
+
 ### Live session API (`/session`)
 - `POST /session/create`
 - `POST /session/join`
@@ -72,6 +78,13 @@ Production-hardened Spring Boot quiz platform with live sessions, demo mode, and
 - `POST /session/{id}/answer`
 - `GET /session/{id}/leaderboard`
 - `GET /session/{id}/results`
+- `POST /session/{id}/pause`
+- `POST /session/{id}/resume`
+- `POST /session/{id}/end`
+- `POST /session/{id}/close-lobby`
+- `POST /session/{id}/force-next`
+- `POST /session/{id}/participants/{participantId}/remove`
+- `GET /session/{id}/answers/review?questionIndex=0`
 
 ### Demo API
 - `GET /demo/start` (seeds demo questions + session + mock players in one call)
@@ -110,6 +123,9 @@ curl http://localhost:8080/dsa/insights
 
 - Request validation with Jakarta Bean Validation
 - Centralized error handling via `@RestControllerAdvice`
+- Stateless JWT authentication with role-based access (`USER`, `HOST`, `ADMIN`)
+- BCrypt password hashing
+- Flyway-managed schema migrations (`src/main/resources/db/migration`)
 - Structured logs for:
   - session create/start/join
   - answer submission
@@ -175,6 +191,8 @@ docker run -p 8080:8080 \
   -e DB_URL=jdbc:mysql://<host>:3306/quiz_platform \
   -e DB_USERNAME=<user> \
   -e DB_PASSWORD=<password> \
+  -e JWT_SECRET_BASE64=<base64-encoded-32-byte-secret> \
+  -e JWT_EXPIRATION_SECONDS=3600 \
   -e SERVER_PORT=8080 \
   quiz-platform
 ```
@@ -226,6 +244,30 @@ Live UI screenshot sample:
 3. Click **Start Quiz** and show live question + timer.
 4. Submit one answer and show leaderboard update.
 5. Open results and highlight DSA insights + Thank You screen.
+
+## 18) 🔐 Authentication quickstart
+
+```bash
+# Register host account
+curl -X POST http://localhost:8080/auth/register \\
+  -H "Content-Type: application/json" \\
+  -d '{"name":"Host User","email":"host@example.com","password":"passw0rd123","role":"HOST"}'
+
+# Login
+curl -X POST http://localhost:8080/auth/login \\
+  -H "Content-Type: application/json" \\
+  -d '{"email":"host@example.com","password":"passw0rd123"}'
+```
+
+Use the returned `accessToken` as `Bearer` token on protected APIs.
+
+## 19) ✅ CI/CD status
+
+- `glass-ui` has its own CI and release workflows.
+- Backend now has independent CI at `.github/workflows/backend-ci.yml`:
+  - Maven verify (tests + checks)
+  - Docker runtime image build validation
+  - CodeQL Java analysis
 
 ## 17) 🎤 Viva quick explanation (short)
 

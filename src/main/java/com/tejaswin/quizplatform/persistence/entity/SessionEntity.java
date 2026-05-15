@@ -15,6 +15,9 @@ public class SessionEntity {
     @Column(nullable = false, length = 16)
     private String quizCode;
 
+    @Column(nullable = false)
+    private Long hostUserId;
+
     @Column(nullable = false, length = 16)
     private String state;
 
@@ -22,6 +25,13 @@ public class SessionEntity {
     private Integer questionDurationSeconds;
 
     private Long startEpochMs;
+
+    private Long pausedAtEpochMs;
+
+    private Long forcedQuestionIndex;
+
+    @Column(nullable = false)
+    private Long lastPersistedTouchEpochMs;
 
     @Column(nullable = false)
     private Long lastActivityEpochMs;
@@ -40,6 +50,14 @@ public class SessionEntity {
 
     public void setQuizCode(String quizCode) {
         this.quizCode = quizCode;
+    }
+
+    public Long getHostUserId() {
+        return hostUserId;
+    }
+
+    public void setHostUserId(Long hostUserId) {
+        this.hostUserId = hostUserId;
     }
 
     public String getState() {
@@ -64,6 +82,30 @@ public class SessionEntity {
 
     public void setStartEpochMs(Long startEpochMs) {
         this.startEpochMs = startEpochMs;
+    }
+
+    public Long getPausedAtEpochMs() {
+        return pausedAtEpochMs;
+    }
+
+    public void setPausedAtEpochMs(Long pausedAtEpochMs) {
+        this.pausedAtEpochMs = pausedAtEpochMs;
+    }
+
+    public Long getForcedQuestionIndex() {
+        return forcedQuestionIndex;
+    }
+
+    public void setForcedQuestionIndex(Long forcedQuestionIndex) {
+        this.forcedQuestionIndex = forcedQuestionIndex;
+    }
+
+    public Long getLastPersistedTouchEpochMs() {
+        return lastPersistedTouchEpochMs;
+    }
+
+    public void setLastPersistedTouchEpochMs(Long lastPersistedTouchEpochMs) {
+        this.lastPersistedTouchEpochMs = lastPersistedTouchEpochMs;
     }
 
     public Long getLastActivityEpochMs() {

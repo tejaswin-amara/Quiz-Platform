@@ -14,6 +14,8 @@ const state = {
   lastLeaderboardSignature: "",
   dsaInsights: null,
   authUser: null,
+  authToken: null,
+  authRole: null,
   activeAuthTab: "login",
   hiddenPlayers: new Set(),
   recentScores: [],
@@ -44,8 +46,12 @@ function byId(id) {
 
 async function api(url, options = {}) {
   try {
+    const headers = { "Content-Type": "application/json", ...(options.headers || {}) };
+    if (state.authToken) {
+      headers.Authorization = `Bearer ${state.authToken}`;
+    }
     const response = await fetch(url, {
-      headers: { "Content-Type": "application/json" },
+      headers,
       ...options,
     });
 
@@ -178,6 +184,8 @@ function isValidEmail(email) {
 
 function saveAuthUser(user) {
   state.authUser = user;
+  state.authToken = user?.token || null;
+  state.authRole = user?.role || null;
   localStorage.setItem("qp_auth_user", JSON.stringify(user));
   updateTopbarUser();
 }
@@ -187,14 +195,19 @@ function loadAuthUser() {
   if (!raw) return;
   try {
     state.authUser = JSON.parse(raw);
+    state.authToken = state.authUser?.token || null;
+    state.authRole = state.authUser?.role || null;
   } catch {
     state.authUser = null;
+    state.authToken = null;
+    state.authRole = null;
   }
   updateTopbarUser();
 }
 
 function updateTopbarUser() {
-  byId("topbar-user-label").textContent = state.authUser?.name || "Guest";
+  const roleSuffix = state.authRole ? ` (${state.authRole})` : "";
+  byId("topbar-user-label").textContent = state.authUser?.name ? `${state.authUser.name}${roleSuffix}` : "Guest";
 }
 
 function saveProfileSettings() {
@@ -407,6 +420,11 @@ async function startSession() {
 }
 
 function endSession() {
+  if (state.isHost && state.sessionId) {
+    api(`/session/${encodeURIComponent(state.sessionId)}/end`, { method: "POST" }).catch(() => {
+      // local fallback after best-effort backend end
+    });
+  }
   stopPolling();
   state.sessionId = null;
   state.participantId = null;
@@ -416,15 +434,22 @@ function endSession() {
   showScreen("dashboard");
 }
 
-function kickSelectedPlayer() {
+async function kickSelectedPlayer() {
   const select = byId("kick-player-select");
   if (!select.value) {
     showStatus("lobby-message", "Select a participant to kick.", true);
     return;
   }
-  state.hiddenPlayers.add(select.value);
-  showStatus("lobby-message", `${select.value} removed from visible lobby list.`);
-  loadSessionState();
+  try {
+    await api(`/session/${encodeURIComponent(state.sessionId)}/participants/${encodeURIComponent(select.value)}/remove`, {
+      method: "POST",
+    });
+    state.hiddenPlayers.add(select.value);
+    showStatus("lobby-message", `${select.value} removed from session.`);
+    await loadSessionState();
+  } catch (error) {
+    showStatus("lobby-message", error.message, true);
+  }
 }
 
 function renderPlayers(players) {
@@ -724,8 +749,13 @@ function bindNavigation() {
   byId("leaderboard-refresh").addEventListener("click", () => manualLeaderboardRefresh(true));
   byId("leaderboard-back").addEventListener("click", backToLive);
 
-  byId("review-answers").addEventListener("click", () => {
-    showStatus("result-message", "Review mode opens live question snapshots for this session.");
+  byId("review-answers").addEventListener("click", async () => {
+    try {
+      const review = await api(`/session/${encodeURIComponent(state.sessionId)}/answers/review?questionIndex=0`);
+      showStatus("result-message", `Review loaded (${review.answers?.length || 0} answers for question 1).`);
+    } catch (error) {
+      showStatus("result-message", error.message, true);
+    }
   });
   byId("new-session").addEventListener("click", () => showScreen("create"));
   byId("finish-flow").addEventListener("click", showThankYou);
@@ -742,7 +772,7 @@ function bindAuthForms() {
     button.addEventListener("click", () => setAuthTab(button.dataset.authTabLink));
   });
 
-  byId("auth-login").addEventListener("submit", (event) => {
+  byId("auth-login").addEventListener("submit", async (event) => {
     event.preventDefault();
     const email = byId("login-email").value.trim();
     const password = byId("login-password").value.trim();
@@ -750,12 +780,26 @@ function bindAuthForms() {
       showStatus("login-message", "Enter valid credentials (email + min 8-char password).", true);
       return;
     }
-    saveAuthUser({ name: email.split("@")[0], email });
-    showStatus("login-message", "Login successful. Redirecting to dashboard...");
-    setTimeout(() => showScreen("dashboard"), 350);
+    try {
+      const auth = await api("/auth/login", {
+        method: "POST",
+        body: JSON.stringify({ email, password }),
+      });
+      saveAuthUser({
+        name: auth.name,
+        email: auth.email,
+        role: auth.role,
+        userId: auth.userId,
+        token: auth.accessToken,
+      });
+      showStatus("login-message", "Login successful. Redirecting to dashboard...");
+      setTimeout(() => showScreen("dashboard"), 350);
+    } catch (error) {
+      showStatus("login-message", error.message, true);
+    }
   });
 
-  byId("auth-register").addEventListener("submit", (event) => {
+  byId("auth-register").addEventListener("submit", async (event) => {
     event.preventDefault();
     const name = byId("register-name").value.trim();
     const email = byId("register-email").value.trim();
@@ -766,11 +810,25 @@ function bindAuthForms() {
       return;
     }
 
-    saveAuthUser({ name, email });
-    byId("profile-name").value = name;
-    byId("profile-email").value = email;
-    showStatus("register-message", "Account created. Welcome aboard.");
-    setTimeout(() => showScreen("dashboard"), 350);
+    try {
+      const auth = await api("/auth/register", {
+        method: "POST",
+        body: JSON.stringify({ name, email, password, role: "HOST" }),
+      });
+      saveAuthUser({
+        name: auth.name,
+        email: auth.email,
+        role: auth.role,
+        userId: auth.userId,
+        token: auth.accessToken,
+      });
+      byId("profile-name").value = name;
+      byId("profile-email").value = email;
+      showStatus("register-message", "Account created. Welcome aboard.");
+      setTimeout(() => showScreen("dashboard"), 350);
+    } catch (error) {
+      showStatus("register-message", error.message, true);
+    }
   });
 
   byId("auth-forgot").addEventListener("submit", (event) => {

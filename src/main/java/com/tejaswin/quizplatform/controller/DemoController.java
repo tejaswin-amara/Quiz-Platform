@@ -1,6 +1,7 @@
 package com.tejaswin.quizplatform.controller;
 
 import com.tejaswin.quizplatform.service.SessionService;
+import com.tejaswin.quizplatform.security.AuthContext;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
@@ -16,6 +17,6 @@ public class DemoController {
 
     @GetMapping("/start")
     public Object startDemo() {
-        return sessionService.startDemoSession();
+        return sessionService.startDemoSession(AuthContext.requireUser().userId());
     }
 }

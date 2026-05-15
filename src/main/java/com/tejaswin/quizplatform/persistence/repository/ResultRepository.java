@@ -10,5 +10,9 @@ public interface ResultRepository extends JpaRepository<ResultEntity, Long> {
 
     List<ResultEntity> findBySessionId(String sessionId);
 
+    List<ResultEntity> findBySessionIdAndQuestionIndex(String sessionId, Integer questionIndex);
+
+    void deleteBySessionIdAndParticipantId(String sessionId, String participantId);
+
     void deleteBySessionId(String sessionId);
 }

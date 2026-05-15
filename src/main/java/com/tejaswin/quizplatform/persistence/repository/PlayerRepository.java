@@ -15,5 +15,9 @@ public interface PlayerRepository extends JpaRepository<PlayerEntity, String> {
 
     Optional<PlayerEntity> findByParticipantIdAndSessionId(String participantId, String sessionId);
 
+    Optional<PlayerEntity> findBySessionIdAndParticipantNameIgnoreCase(String sessionId, String participantName);
+
+    void deleteByParticipantIdAndSessionId(String participantId, String sessionId);
+
     void deleteBySessionId(String sessionId);
 }

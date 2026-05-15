@@ -15,6 +15,9 @@ public class PlayerEntity {
     @Column(nullable = false, length = 16)
     private String sessionId;
 
+    @Column
+    private Long userId;
+
     @Column(nullable = false)
     private String participantName;
 
@@ -38,6 +41,14 @@ public class PlayerEntity {
 
     public void setSessionId(String sessionId) {
         this.sessionId = sessionId;
+    }
+
+    public Long getUserId() {
+        return userId;
+    }
+
+    public void setUserId(Long userId) {
+        this.userId = userId;
     }
 
     public String getParticipantName() {
