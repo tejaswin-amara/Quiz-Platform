@@ -124,7 +124,7 @@ class SessionControllerApiTest {
     void shouldStartDemoSessionWithPlayersInSingleCall() throws Exception {
         String token = registerAndGetToken("host-demo@test.com", "HOST");
         mockMvc.perform(get("/demo/start"))
-                .andExpect(status().isUnauthorized());
+                .andExpect(status().isForbidden());
 
         mockMvc.perform(get("/demo/start")
                         .header("Authorization", "Bearer " + token))
