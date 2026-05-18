@@ -70,7 +70,7 @@ CREATE TABLE IF NOT EXISTS quiz_results (
     submitted_at TIMESTAMP NOT NULL
 );
 
-CREATE INDEX IF NOT EXISTS idx_sessions_last_activity ON sessions(last_activity_epoch_ms);
-CREATE INDEX IF NOT EXISTS idx_players_session_id ON players(session_id);
-CREATE INDEX IF NOT EXISTS idx_results_session_question ON results(session_id, question_index);
-CREATE INDEX IF NOT EXISTS idx_quiz_results_quiz_code ON quiz_results(quiz_code);
+CREATE INDEX idx_sessions_last_activity ON sessions(last_activity_epoch_ms);
+CREATE INDEX idx_players_session_id ON players(session_id);
+CREATE INDEX idx_results_session_question ON results(session_id, question_index);
+CREATE INDEX idx_quiz_results_quiz_code ON quiz_results(quiz_code);
