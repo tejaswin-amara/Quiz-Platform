@@ -60,12 +60,13 @@ public class ApiExceptionHandler {
     }
 
     private ResponseEntity<Map<String, Object>> error(HttpStatus status, String message) {
+        String requestId = MDC.get("requestId");
         return ResponseEntity.status(status).body(Map.of(
                 "timestamp", Instant.now().toString(),
                 "status", status.value(),
                 "error", status.getReasonPhrase(),
                 "message", message,
-                "requestId", String.valueOf(MDC.getOrDefault("requestId", "unknown"))
+                "requestId", requestId == null ? "unknown" : requestId
         ));
     }
 }
