@@ -49,7 +49,7 @@ public class SessionController {
             @PathVariable("id") @Pattern(regexp = "^S[A-Z0-9]{8}$", message = "sessionId format is invalid") String sessionId,
             @Valid @RequestBody SessionAnswerRequest request
     ) {
-        return sessionService.submitSessionAnswer(sessionId, request.participantId(), request.answerOption());
+        return sessionService.submitSessionAnswer(sessionId, request.participantId(), request.answerOption(), AuthContext.requireUser().userId());
     }
 
     @GetMapping("/{id}/leaderboard")

@@ -12,6 +12,7 @@ const state = {
   inFlightSession: false,
   inFlightLeaderboard: false,
   lastLeaderboardSignature: "",
+  lastLeaderboardRanks: {},
   dsaInsights: null,
   authUser: null,
   authToken: null,
@@ -319,6 +320,7 @@ async function createSession() {
     state.sessionId = created.sessionId;
     state.participantId = null;
     state.hiddenPlayers = new Set();
+    state.lastLeaderboardRanks = {};
 
     byId("lobby-session").textContent = created.sessionId;
     byId("lobby-state").textContent = created.state;
@@ -347,6 +349,7 @@ async function startDemoQuiz() {
     state.sessionId = demo.sessionId;
     state.participantId = null;
     state.hiddenPlayers = new Set();
+    state.lastLeaderboardRanks = {};
 
     byId("host-controls").style.display = "flex";
     byId("kick-controls").hidden = false;
@@ -389,6 +392,7 @@ async function joinSession() {
     state.sessionId = joined.sessionId;
     state.participantId = joined.participantId;
     state.participantName = joined.participantName;
+    state.lastLeaderboardRanks = {};
 
     byId("lobby-session").textContent = joined.sessionId;
     byId("lobby-state").textContent = joined.state;
@@ -430,6 +434,7 @@ function endSession() {
   state.participantId = null;
   state.currentQuestionId = null;
   state.lastLeaderboardSignature = "";
+  state.lastLeaderboardRanks = {};
   showStatus("lobby-message", "Session closed locally. Start a new session from dashboard.");
   showScreen("dashboard");
 }
@@ -524,6 +529,8 @@ function renderQuestion(questionPayload) {
 
 function renderLeaderboard(entries) {
   const signature = entries.map((entry) => `${entry.participantId}:${entry.score}`).join("|");
+  const previousRanks = state.lastLeaderboardRanks || {};
+  const nextRanks = {};
 
   [byId("live-leaderboard"), byId("leaderboard-full")].forEach((list) => {
     if (!list) return;
@@ -531,7 +538,7 @@ function renderLeaderboard(entries) {
 
     entries.forEach((entry, index) => {
       const li = document.createElement("li");
-      const previousRank = Number(li.dataset.rank || index + 1);
+      const previousRank = Number(previousRanks[entry.participantId] || index + 1);
       const delta = previousRank - (index + 1);
       const movement = delta > 0 ? ` ▲${delta}` : delta < 0 ? ` ▼${Math.abs(delta)}` : "";
       li.textContent = `#${index + 1} ${entry.participantName} — ${entry.score}${movement}`;
@@ -548,6 +555,10 @@ function renderLeaderboard(entries) {
     });
   });
 
+  entries.forEach((entry, index) => {
+    nextRanks[entry.participantId] = index + 1;
+  });
+  state.lastLeaderboardRanks = nextRanks;
   state.lastLeaderboardSignature = signature;
 }
 

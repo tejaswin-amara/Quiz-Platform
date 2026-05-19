@@ -14,6 +14,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.scheduling.annotation.Scheduled;
+import org.springframework.security.access.AccessDeniedException;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -210,7 +211,7 @@ public class SessionService {
     }
 
     @Transactional
-    public Map<String, Object> submitSessionAnswer(String sessionId, String participantId, int answerOption) {
+    public Map<String, Object> submitSessionAnswer(String sessionId, String participantId, int answerOption, Long callerUserId) {
         if (participantId == null || participantId.isBlank()) {
             throw new IllegalArgumentException("participantId is required");
         }
@@ -222,6 +223,9 @@ public class SessionService {
 
         PlayerEntity player = playerRepository.findByParticipantIdAndSessionId(participantId, sessionId)
                 .orElseThrow(() -> new IllegalArgumentException("Participant has not joined this session"));
+        if (player.getUserId() != null && !player.getUserId().equals(callerUserId)) {
+            throw new AccessDeniedException("Cannot submit answers for another participant");
+        }
 
         List<Question> questions = quizPlatformService.getQuizQuestions(session.getQuizCode());
         int index = currentQuestionIndex(session, questions.size());

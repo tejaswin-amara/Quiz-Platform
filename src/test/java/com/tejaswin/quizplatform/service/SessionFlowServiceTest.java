@@ -10,6 +10,7 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
+import org.springframework.security.access.AccessDeniedException;
 import org.springframework.test.context.TestPropertySource;
 
 import java.util.List;
@@ -39,6 +40,7 @@ class SessionFlowServiceTest {
 
     private Long hostUserId;
     private Long playerUserId;
+    private Long otherUserId;
 
     @BeforeEach
     void setup() {
@@ -57,6 +59,13 @@ class SessionFlowServiceTest {
         player.setRole(UserRole.USER);
         playerUserId = userRepository.save(player).getId();
 
+        UserEntity other = new UserEntity();
+        other.setEmail("other-session@test.com");
+        other.setDisplayName("Other");
+        other.setPasswordHash("hash");
+        other.setRole(UserRole.USER);
+        otherUserId = userRepository.save(other).getId();
+
         quizPlatformService.addQuestion(new Question(2001, "Q1", List.of("a", "b"), 1, "Arrays", 2, 2));
         quizPlatformService.addQuestion(new Question(2002, "Q2", List.of("a", "b"), 0, "Graphs", 3, 3));
     }
@@ -72,8 +81,8 @@ class SessionFlowServiceTest {
         Map<String, Object> questionPayload = sessionService.getSessionQuestion(sessionId, true, hostUserId);
         assertEquals("LIVE", questionPayload.get("state"));
 
-        Map<String, Object> p1Answer = sessionService.submitSessionAnswer(sessionId, p1, 1);
-        Map<String, Object> p2Answer = sessionService.submitSessionAnswer(sessionId, p2, 0);
+        Map<String, Object> p1Answer = sessionService.submitSessionAnswer(sessionId, p1, 1, playerUserId);
+        Map<String, Object> p2Answer = sessionService.submitSessionAnswer(sessionId, p2, 0, hostUserId);
 
         assertEquals(true, p1Answer.get("isCorrect"));
         assertEquals(false, p2Answer.get("isCorrect"));
@@ -97,8 +106,17 @@ class SessionFlowServiceTest {
 
         sessionService.getSessionQuestion(sessionId, true, hostUserId);
 
-        assertThrows(IllegalArgumentException.class, () -> sessionService.submitSessionAnswer(sessionId, participantId, 5));
-        assertThrows(NotFoundException.class, () -> sessionService.submitSessionAnswer("SZZZZZZZZ", participantId, 0));
+        assertThrows(IllegalArgumentException.class, () -> sessionService.submitSessionAnswer(sessionId, participantId, 5, playerUserId));
+        assertThrows(NotFoundException.class, () -> sessionService.submitSessionAnswer("SZZZZZZZZ", participantId, 0, playerUserId));
+    }
+
+    @Test
+    void shouldRejectSubmittingAnswersForAnotherAuthenticatedParticipant() {
+        String sessionId = String.valueOf(sessionService.createSession(hostUserId, "Live Session", List.of(2001L), 8).get("sessionId"));
+        String participantId = String.valueOf(sessionService.joinSession(sessionId, "Alice", playerUserId).get("participantId"));
+        sessionService.getSessionQuestion(sessionId, true, hostUserId);
+
+        assertThrows(AccessDeniedException.class, () -> sessionService.submitSessionAnswer(sessionId, participantId, 1, otherUserId));
     }
 
     @Test
