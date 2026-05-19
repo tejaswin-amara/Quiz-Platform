@@ -253,12 +253,6 @@ public class SessionService {
         if (isCorrect) {
             updated += current.difficulty() * POINTS_PER_DIFFICULTY_LEVEL;
         }
-        player.setScore(updated);
-
-        List<Integer> history = parseHistory(player.getScoreHistoryCsv());
-        history.add(updated);
-        player.setScoreHistoryCsv(toHistoryCsv(history));
-        playerRepository.save(player);
 
         ResultEntity result = new ResultEntity();
         result.setSessionId(sessionId);
@@ -277,6 +271,12 @@ public class SessionService {
                     "alreadySubmitted", true
             );
         }
+
+        player.setScore(updated);
+        List<Integer> history = parseHistory(player.getScoreHistoryCsv());
+        history.add(updated);
+        player.setScoreHistoryCsv(toHistoryCsv(history));
+        playerRepository.save(player);
 
         touchSession(session, false);
         log.info(

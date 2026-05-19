@@ -13,12 +13,14 @@ import org.springframework.web.filter.OncePerRequestFilter;
 
 import java.io.IOException;
 import java.util.UUID;
+import java.util.regex.Pattern;
 
 @Component
 public class RequestObservabilityFilter extends OncePerRequestFilter {
     private static final Logger log = LoggerFactory.getLogger(RequestObservabilityFilter.class);
     private static final String REQUEST_ID_HEADER = "X-Request-Id";
     private static final String REQUEST_ID_KEY = "requestId";
+    private static final Pattern SAFE_REQUEST_ID = Pattern.compile("^[A-Za-z0-9._\\-]{1,128}$");
 
     private final long slowRequestThresholdMs;
 
@@ -54,9 +56,9 @@ public class RequestObservabilityFilter extends OncePerRequestFilter {
             return UUID.randomUUID().toString();
         }
         String cleaned = requestIdHeader.trim();
-        if (cleaned.length() > 128) {
-            return cleaned.substring(0, 128);
+        if (SAFE_REQUEST_ID.matcher(cleaned).matches()) {
+            return cleaned;
         }
-        return cleaned;
+        return UUID.randomUUID().toString();
     }
 }
