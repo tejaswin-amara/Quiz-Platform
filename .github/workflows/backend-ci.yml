@@ -41,6 +41,8 @@ jobs:
         run: mvn -B -ntp -DskipTests package
       - name: Validate Docker image build
         run: docker build -t quiz-platform-ci .
+      - name: Validate docker compose configuration
+        run: docker compose config -q
 
   codeql:
     runs-on: ubuntu-latest

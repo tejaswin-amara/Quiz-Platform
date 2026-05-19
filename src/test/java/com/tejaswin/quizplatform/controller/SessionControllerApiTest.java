@@ -52,6 +52,7 @@ class SessionControllerApiTest {
     void shouldExposeSessionFlowApis() throws Exception {
         String hostToken = registerAndGetToken("host-api@test.com", "HOST");
         String playerToken = registerAndGetToken("player-api@test.com", "USER");
+        String outsiderToken = registerAndGetToken("outsider-api@test.com", "USER");
 
         String createResponse = mockMvc.perform(post("/session/create")
                         .header("Authorization", "Bearer " + hostToken)
@@ -102,6 +103,18 @@ class SessionControllerApiTest {
                 .andExpect(jsonPath("$.leaderboard").isArray())
                 .andExpect(jsonPath("$.averageScore").exists())
                 .andExpect(jsonPath("$.lisPerformanceTrend").exists());
+
+        mockMvc.perform(get("/session/{id}/question", sessionId)
+                        .header("Authorization", "Bearer " + outsiderToken))
+                .andExpect(status().isForbidden());
+
+        mockMvc.perform(get("/session/{id}/leaderboard", sessionId)
+                        .header("Authorization", "Bearer " + outsiderToken))
+                .andExpect(status().isForbidden());
+
+        mockMvc.perform(get("/session/{id}/results", sessionId)
+                        .header("Authorization", "Bearer " + outsiderToken))
+                .andExpect(status().isForbidden());
     }
 
     @Test

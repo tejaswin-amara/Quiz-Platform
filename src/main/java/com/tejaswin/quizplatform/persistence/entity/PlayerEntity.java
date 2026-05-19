@@ -4,9 +4,15 @@ import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
 import jakarta.persistence.Id;
 import jakarta.persistence.Table;
+import jakarta.persistence.UniqueConstraint;
 
 @Entity
-@Table(name = "players")
+@Table(
+        name = "players",
+        uniqueConstraints = {
+                @UniqueConstraint(name = "uk_players_session_name", columnNames = {"sessionId", "participantName"})
+        }
+)
 public class PlayerEntity {
     @Id
     @Column(length = 64)

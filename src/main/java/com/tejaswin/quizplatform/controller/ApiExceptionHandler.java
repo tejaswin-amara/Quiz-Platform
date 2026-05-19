@@ -3,6 +3,7 @@ package com.tejaswin.quizplatform.controller;
 import com.tejaswin.quizplatform.exception.NotFoundException;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.slf4j.MDC;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.AccessDeniedException;
@@ -63,7 +64,8 @@ public class ApiExceptionHandler {
                 "timestamp", Instant.now().toString(),
                 "status", status.value(),
                 "error", status.getReasonPhrase(),
-                "message", message
+                "message", message,
+                "requestId", String.valueOf(MDC.getOrDefault("requestId", "unknown"))
         ));
     }
 }

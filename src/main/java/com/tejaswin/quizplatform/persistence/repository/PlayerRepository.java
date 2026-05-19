@@ -13,6 +13,8 @@ public interface PlayerRepository extends JpaRepository<PlayerEntity, String> {
 
     boolean existsBySessionIdAndParticipantNameIgnoreCase(String sessionId, String participantName);
 
+    boolean existsBySessionIdAndUserId(String sessionId, Long userId);
+
     Optional<PlayerEntity> findByParticipantIdAndSessionId(String participantId, String sessionId);
 
     Optional<PlayerEntity> findBySessionIdAndParticipantNameIgnoreCase(String sessionId, String participantName);

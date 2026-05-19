@@ -87,11 +87,11 @@ class SessionFlowServiceTest {
         assertEquals(true, p1Answer.get("isCorrect"));
         assertEquals(false, p2Answer.get("isCorrect"));
 
-        List<LeaderboardEntry> leaderboard = sessionService.sessionLeaderboard(sessionId);
+        List<LeaderboardEntry> leaderboard = sessionService.sessionLeaderboard(sessionId, hostUserId);
         assertFalse(leaderboard.isEmpty());
         assertEquals("Alice", leaderboard.get(0).participantName());
 
-        Map<String, Object> results = sessionService.sessionResults(sessionId);
+        Map<String, Object> results = sessionService.sessionResults(sessionId, hostUserId);
         assertNotNull(results.get("totalScoreRange"));
         assertNotNull(results.get("lisPerformanceTrend"));
         assertNotNull(results.get("averageScore"));

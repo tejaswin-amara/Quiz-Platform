@@ -56,14 +56,14 @@ public class SessionController {
     public Object leaderboard(
             @PathVariable("id") @Pattern(regexp = "^S[A-Z0-9]{8}$", message = "sessionId format is invalid") String sessionId
     ) {
-        return sessionService.sessionLeaderboard(sessionId);
+        return sessionService.sessionLeaderboard(sessionId, AuthContext.requireUser().userId());
     }
 
     @GetMapping("/{id}/results")
     public Object results(
             @PathVariable("id") @Pattern(regexp = "^S[A-Z0-9]{8}$", message = "sessionId format is invalid") String sessionId
     ) {
-        return sessionService.sessionResults(sessionId);
+        return sessionService.sessionResults(sessionId, AuthContext.requireUser().userId());
     }
 
     @PostMapping("/{id}/pause")

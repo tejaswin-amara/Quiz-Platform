@@ -15,6 +15,7 @@ import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.security.access.AccessDeniedException;
+import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -138,7 +139,11 @@ public class SessionService {
         player.setParticipantName(normalizedName);
         player.setScore(0);
         player.setScoreHistoryCsv("0");
-        playerRepository.save(player);
+        try {
+            playerRepository.save(player);
+        } catch (DataIntegrityViolationException duplicateName) {
+            throw new IllegalArgumentException("Participant with this name already joined");
+        }
 
         touchSession(session, true);
         log.info("event=session_joined sessionId={} participantId={} participantName={} userId={}", sessionId, participantId, normalizedName, userId);
@@ -154,6 +159,7 @@ public class SessionService {
     @Transactional
     public Map<String, Object> getSessionQuestion(String sessionId, boolean start, Long callerUserId) {
         SessionEntity session = ensureSessionExists(sessionId);
+        requireSessionAccess(session, callerUserId);
 
         if ("LOBBY".equals(session.getState()) && start) {
             requireHostOwner(session, callerUserId);
@@ -262,7 +268,15 @@ public class SessionService {
         result.setCorrect(isCorrect);
         result.setScoreAfterAnswer(updated);
         result.setSubmittedAt(Instant.now());
-        resultRepository.save(result);
+        try {
+            resultRepository.save(result);
+        } catch (DataIntegrityViolationException duplicateSubmission) {
+            return Map.of(
+                    "participantId", participantId,
+                    "questionIndex", index,
+                    "alreadySubmitted", true
+            );
+        }
 
         touchSession(session, false);
         log.info(
@@ -284,8 +298,9 @@ public class SessionService {
     }
 
     @Transactional(readOnly = true)
-    public List<LeaderboardEntry> sessionLeaderboard(String sessionId) {
+    public List<LeaderboardEntry> sessionLeaderboard(String sessionId, Long callerUserId) {
         SessionEntity session = ensureSessionExists(sessionId);
+        requireSessionAccess(session, callerUserId);
 
         List<PlayerEntity> players = playerRepository.findBySessionId(sessionId);
         Map<String, Integer> scores = new HashMap<>();
@@ -301,10 +316,11 @@ public class SessionService {
     }
 
     @Transactional(readOnly = true)
-    public Map<String, Object> sessionResults(String sessionId) {
+    public Map<String, Object> sessionResults(String sessionId, Long callerUserId) {
         SessionEntity session = ensureSessionExists(sessionId);
+        requireSessionAccess(session, callerUserId);
 
-        List<LeaderboardEntry> leaderboard = sessionLeaderboard(sessionId);
+        List<LeaderboardEntry> leaderboard = sessionLeaderboard(sessionId, callerUserId);
         int totalScoreRange = analyticsService.totalScoreRange(leaderboard);
 
         Map<String, Integer> lisByParticipant = new HashMap<>();
@@ -530,6 +546,18 @@ public class SessionService {
     private void requireHostOwner(SessionEntity session, Long callerUserId) {
         if (callerUserId == null || !callerUserId.equals(session.getHostUserId())) {
             throw new IllegalStateException("Only session host can perform this operation");
+        }
+    }
+
+    private void requireSessionAccess(SessionEntity session, Long callerUserId) {
+        if (callerUserId == null) {
+            throw new AccessDeniedException("Authentication required");
+        }
+        if (callerUserId.equals(session.getHostUserId())) {
+            return;
+        }
+        if (!playerRepository.existsBySessionIdAndUserId(session.getSessionId(), callerUserId)) {
+            throw new AccessDeniedException("Not a participant of this session");
         }
     }
 
