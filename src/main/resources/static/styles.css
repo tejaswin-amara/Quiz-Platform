@@ -548,3 +548,25 @@ pre {
     .cred-grid { grid-template-columns: 1fr; }
     .kick-controls { grid-template-columns: 1fr; }
 }
+
+@media (prefers-reduced-motion: reduce) {
+    *,
+    *::before,
+    *::after {
+        animation-duration: 0.01ms !important;
+        animation-iteration-count: 1 !important;
+        transition-duration: 0.01ms !important;
+        scroll-behavior: auto !important;
+    }
+
+    .screen.active,
+    .timer.pulse,
+    .question-card.shift,
+    .leaderboard li.bump,
+    .spinner,
+    .skeleton-line,
+    .skeleton-grid span {
+        animation: none !important;
+        transform: none !important;
+    }
+}

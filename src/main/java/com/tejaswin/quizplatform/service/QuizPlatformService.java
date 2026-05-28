@@ -105,7 +105,7 @@ public class QuizPlatformService {
         }
 
         for (Long questionId : questionIds) {
-            if (questionId == null || questionBST.search(questionId) == null) {
+            if (questionId == null || resolveQuestion(questionId) == null) {
                 throw new IllegalArgumentException("Question not found in BST: " + questionId);
             }
         }
@@ -142,7 +142,7 @@ public class QuizPlatformService {
     public synchronized List<Question> getQuizQuestions(String code) {
         Quiz quiz = ensureQuizExists(code);
         return quiz.questionIds().stream()
-                .map(questionBST::search)
+                .map(this::resolveQuestion)
                 .filter(q -> q != null)
                 .toList();
     }
@@ -231,10 +231,18 @@ public class QuizPlatformService {
 
     public synchronized Quiz ensureQuizExists(String code) {
         Quiz quiz = quizzes.get(code);
-        if (quiz == null) {
-            throw new NotFoundException("Quiz not found: " + code);
+        if (quiz != null) {
+            return quiz;
         }
-        return quiz;
+        return quizRepository.findById(code)
+                .map(entity -> {
+                    Quiz loaded = new Quiz(entity.getCode(), entity.getTitle(), parseQuestionIds(entity.getQuestionIdsCsv()));
+                    quizzes.put(loaded.code(), loaded);
+                    quizScores.putIfAbsent(loaded.code(), new HashMap<>());
+                    quizScoreHistory.putIfAbsent(loaded.code(), new HashMap<>());
+                    return loaded;
+                })
+                .orElseThrow(() -> new NotFoundException("Quiz not found: " + code));
     }
 
     public synchronized String resolveParticipantName(String participantId) {
@@ -249,7 +257,7 @@ public class QuizPlatformService {
                 throw new IllegalStateException("Generated UUID is shorter than expected code length");
             }
             code = compactUuid.substring(0, QUIZ_CODE_LENGTH).toUpperCase();
-        } while (quizzes.containsKey(code));
+        } while (quizzes.containsKey(code) || quizRepository.existsById(code));
         return code;
     }
 
@@ -337,6 +345,22 @@ public class QuizPlatformService {
                 entity.getDifficulty(),
                 entity.getWeight()
         );
+    }
+
+    private Question resolveQuestion(Long questionId) {
+        Question cached = questionBST.search(questionId);
+        if (cached != null) {
+            return cached;
+        }
+        return questionRepository.findById(questionId)
+                .map(this::mapQuestion)
+                .map(question -> {
+                    allQuestions.put(question.id(), question);
+                    questionBST.insert(question);
+                    topicGraph.addTopic(question.topic());
+                    return question;
+                })
+                .orElse(null);
     }
 
     private String toCsv(List<Long> values) {
