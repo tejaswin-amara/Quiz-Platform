@@ -202,6 +202,8 @@ docker run -p 8080:8080 \
 2. Build runtime image from local artifact: `docker build -t quiz-platform .`
 3. Run container with env vars as shown above.
 
+For full production hosting (GitHub Pages/Cloudflare + Railway/Render + MySQL), see `DEPLOYMENT.md`.
+
 ## 12) 🎥 Demo Mode (1-click)
 
 1. Start app (`mvn spring-boot:run` or Docker).

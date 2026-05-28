@@ -1,0 +1,46 @@
+name: frontend-pages-deploy
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - "src/main/resources/static/**"
+      - ".github/workflows/frontend-pages-deploy.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+concurrency:
+  group: frontend-pages
+  cancel-in-progress: true
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - uses: actions/checkout@v4
+      - name: Prepare static frontend artifact
+        env:
+          API_BASE_URL: ${{ vars.API_BASE_URL }}
+        run: |
+          mkdir -p /tmp/pages-dist
+          cp -R src/main/resources/static/. /tmp/pages-dist/
+          if [ -n "${API_BASE_URL}" ]; then
+            cat > /tmp/pages-dist/config.js <<EOF
+window.__QUIZ_PLATFORM_CONFIG__ = {
+  apiBaseUrl: "${API_BASE_URL}"
+};
+EOF
+          fi
+      - uses: actions/configure-pages@v5
+      - uses: actions/upload-pages-artifact@v3
+        with:
+          path: /tmp/pages-dist
+      - id: deployment
+        uses: actions/deploy-pages@v4

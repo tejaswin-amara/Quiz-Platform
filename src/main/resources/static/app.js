@@ -40,9 +40,21 @@ const screens = [
 const LOBBY_POLL_INTERVAL_MS = 3000;
 const LIVE_POLL_INTERVAL_MS = 2000;
 const LEADERBOARD_POLL_INTERVAL_MS = 1500;
+const API_BASE_URL = (() => {
+  const configValue = (window.__QUIZ_PLATFORM_CONFIG__ && window.__QUIZ_PLATFORM_CONFIG__.apiBaseUrl) || "";
+  const metaNode = document.querySelector('meta[name="quiz-api-base-url"]');
+  const metaValue = metaNode ? metaNode.content : "";
+  const candidate = String(configValue || metaValue).trim();
+  return candidate ? candidate.replace(/\/+$/, "") : "";
+})();
 
 function byId(id) {
   return document.getElementById(id);
+}
+
+function resolveApiUrl(url) {
+  if (!API_BASE_URL || /^https?:\/\//i.test(url)) return url;
+  return `${API_BASE_URL}${url.startsWith("/") ? "" : "/"}${url}`;
 }
 
 async function api(url, options = {}) {
@@ -51,7 +63,7 @@ async function api(url, options = {}) {
     if (state.authToken) {
       headers.Authorization = `Bearer ${state.authToken}`;
     }
-    const response = await fetch(url, {
+    const response = await fetch(resolveApiUrl(url), {
       headers,
       ...options,
     });
