@@ -5,7 +5,7 @@ RUN apt-get update \
     && rm -rf /var/lib/apt/lists/*
 RUN groupadd --system app && useradd --system --gid app app
 RUN mkdir -p /app/data
-ARG JAR_FILE=target/quiz-platform-0.0.1-SNAPSHOT.jar
+ARG JAR_FILE=target/quiz-platform-0.0.1.jar
 COPY ${JAR_FILE} app.jar
 RUN chown -R app:app /app
 USER app
