@@ -105,6 +105,14 @@ function hideGlobalError() {
   el.textContent = "";
 }
 
+function announce(message) {
+  const el = document.getElementById('sr-announcer');
+  if (!el) return;
+  el.textContent = '';
+  // small delay so repeated same-text announcements fire
+  setTimeout(() => { el.textContent = message; }, 50);
+}
+
 function showScreen(name) {
   screens.forEach((screen) => {
     const node = byId(`screen-${screen}`);
@@ -115,6 +123,21 @@ function showScreen(name) {
   document.querySelectorAll("[data-nav]").forEach((button) => {
     button.classList.toggle("active-nav", button.dataset.nav === name);
   });
+
+  const labels = {
+    home: 'Home', auth: 'Authentication', dashboard: 'Dashboard',
+    create: 'Create Session', join: 'Join Session', lobby: 'Waiting Lobby',
+    live: 'Live Quiz', leaderboard: 'Leaderboard', results: 'Session Results',
+    profile: 'Profile & Settings', thanks: 'Thank You',
+  };
+  announce(labels[name] || name);
+
+  // Move focus to the screen heading for keyboard users
+  const activeScreen = byId(`screen-${name}`);
+  if (activeScreen) {
+    const heading = activeScreen.querySelector('h2');
+    if (heading) { heading.setAttribute('tabindex', '-1'); heading.focus(); }
+  }
 }
 
 function parseQuestionIds(raw) {

@@ -4,10 +4,26 @@
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <meta name="quiz-api-base-url" content="" />
+    <meta name="description" content="Quiz Platform Live — run real-time multiplayer DSA quizzes with live leaderboards and built-in algorithm insights." />
+    <meta name="theme-color" content="#050912" />
+    <meta http-equiv="Content-Security-Policy"
+          content="default-src 'self'; style-src 'self' https://fonts.googleapis.com; font-src 'self' https://fonts.gstatic.com; img-src 'self' data: https://images.unsplash.com; script-src 'self'; connect-src 'self'; object-src 'none'; frame-ancestors 'none';" />
+
+    <!-- Font preconnects for performance -->
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+
     <title>Quiz Platform Live</title>
     <link rel="stylesheet" href="styles.css" />
 </head>
 <body>
+<!-- Skip navigation for keyboard users -->
+<a class="skip-link" href="#main-content">Skip to main content</a>
+
+<!-- ARIA live region for screen readers -->
+<div id="sr-announcer" aria-live="polite" aria-atomic="true"
+     class="visually-hidden" style="position:absolute;left:-9999px;width:1px;height:1px;overflow:hidden;"></div>
+
 <div class="app-shell">
     <header class="topbar">
         <div class="topbar-brand">
@@ -21,7 +37,6 @@
     </header>
 
     <nav class="main-nav" aria-label="Main Navigation">
-        <button class="small ghost" data-nav="home">Landing</button>
         <button class="small ghost" data-nav="auth">Auth</button>
         <button class="small ghost" data-nav="dashboard">Dashboard</button>
         <button class="small ghost" data-nav="create">Host</button>
@@ -30,9 +45,9 @@
         <button class="small ghost" data-nav="leaderboard">Leaderboard</button>
     </nav>
 
-    <section id="global-error" class="banner error" hidden></section>
+    <section id="global-error" class="banner error" aria-live="assertive" hidden></section>
 
-    <main>
+    <main id="main-content">
         <section id="screen-home" class="screen active">
             <div class="hero">
                 <div>
@@ -237,7 +252,7 @@
         <section id="screen-live" class="screen">
             <div class="live-head">
                 <h2>Live Quiz</h2>
-                <div class="timer" id="live-timer">0s</div>
+                <div class="timer" id="live-timer" aria-label="Time remaining" aria-live="polite">0s</div>
             </div>
             <p class="muted">Question <span id="live-index">1</span>/<span id="live-total">1</span></p>
             <p id="live-sync" class="sync-label">Sync pending…</p>
@@ -255,7 +270,7 @@
                 <div id="live-options" class="options"></div>
             </article>
 
-            <p id="answer-status" class="status"></p>
+            <p id="answer-status" class="status" aria-live="polite"></p>
             <div class="loading-row"><span id="live-spinner" class="spinner" hidden></span></div>
             <p id="live-loading" class="muted"></p>
 
@@ -354,7 +369,7 @@
                 <button id="thanks-demo" class="ghost">Run Demo Again</button>
             </div>
         </section>
-    </main>
+        </main>
 </div>
 
 <script src="config.js"></script>

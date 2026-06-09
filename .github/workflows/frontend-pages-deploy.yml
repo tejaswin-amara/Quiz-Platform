@@ -1,10 +1,20 @@
 name: frontend-pages-deploy
 
+# Deploys two things to GitHub Pages under one site:
+#   /          → static HTML/CSS/JS app  (src/main/resources/static/)
+#   /storybook → glass-ui component library Storybook
+#
+# Triggers on the branch that holds the actual code.
+# When the project merges to main, update `branches` below.
+
 on:
   push:
-    branches: [main]
+    branches:
+      - main
+      - copilot/build-java-quiz-platform
     paths:
       - "src/main/resources/static/**"
+      - "glass-ui/**"
       - ".github/workflows/frontend-pages-deploy.yml"
   workflow_dispatch:
 
@@ -18,29 +28,65 @@ concurrency:
   cancel-in-progress: true
 
 jobs:
-  deploy:
+  build-and-deploy:
     runs-on: ubuntu-latest
     environment:
       name: github-pages
       url: ${{ steps.deployment.outputs.page_url }}
+
     steps:
+      # ── Checkout ────────────────────────────────────────
       - uses: actions/checkout@v4
-      - name: Prepare static frontend artifact
+
+      # ── Node setup for Storybook ─────────────────────────
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+          cache-dependency-path: glass-ui/package-lock.json
+
+      # ── Install glass-ui dependencies ────────────────────
+      - name: Install glass-ui dependencies
+        working-directory: glass-ui
+        run: npm ci
+
+      # ── Build Storybook ───────────────────────────────────
+      - name: Build Storybook
+        working-directory: glass-ui
+        run: npm run build-storybook -- --output-dir storybook-static
+
+      # ── Assemble Pages artifact ───────────────────────────
+      #    Layout:  /            → static app
+      #             /storybook/  → Storybook
+      - name: Assemble Pages artifact
         env:
           API_BASE_URL: ${{ vars.API_BASE_URL }}
         run: |
-          mkdir -p /tmp/pages-dist
+          mkdir -p /tmp/pages-dist/storybook
+
+          # Copy static frontend to root
           cp -R src/main/resources/static/. /tmp/pages-dist/
+
+          # Inject runtime API base URL if set as a repo variable
           if [ -n "${API_BASE_URL}" ]; then
-            cat > /tmp/pages-dist/config.js <<EOF
-window.__QUIZ_PLATFORM_CONFIG__ = {
-  apiBaseUrl: "${API_BASE_URL}"
-};
-EOF
+            printf 'window.__QUIZ_PLATFORM_CONFIG__ = {\n  apiBaseUrl: "%s"\n};\n' \
+              "${API_BASE_URL}" > /tmp/pages-dist/config.js
           fi
+
+          # Copy Storybook output to /storybook sub-path
+          cp -R glass-ui/storybook-static/. /tmp/pages-dist/storybook/
+
+          echo "Pages artifact contents:"
+          ls -la /tmp/pages-dist/
+          echo "Storybook contents:"
+          ls /tmp/pages-dist/storybook/ | head -10
+
+      # ── Upload & Deploy ───────────────────────────────────
       - uses: actions/configure-pages@v5
+
       - uses: actions/upload-pages-artifact@v3
         with:
           path: /tmp/pages-dist
+
       - id: deployment
         uses: actions/deploy-pages@v4
