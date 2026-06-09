@@ -42,6 +42,15 @@ jobs:
       - name: Validate Docker image build
         run: docker build -t quiz-platform-ci .
       - name: Validate docker compose configuration
+        # Supply dummy values for :? required variables so docker compose can
+        # parse and validate the YAML without actually starting any services.
+        env:
+          MYSQL_ROOT_PASSWORD: ci-validation-dummy
+          MYSQL_USER: ci-validation-dummy
+          MYSQL_PASSWORD: ci-validation-dummy
+          DB_USERNAME: ci-validation-dummy
+          DB_PASSWORD: ci-validation-dummy
+          JWT_SECRET_BASE64: Y2ktdmFsaWRhdGlvbi1kdW1teS1zZWNyZXQ=
         run: docker compose config -q
 
   codeql:
