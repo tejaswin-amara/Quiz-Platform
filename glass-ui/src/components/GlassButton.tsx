@@ -1,12 +1,13 @@
 import React from "react";
 import styled, { css } from "styled-components";
-import { motion } from "framer-motion";
+import { motion, HTMLMotionProps } from "framer-motion";
 import { usePrefersReducedMotion } from "../hooks/usePrefersReducedMotion";
 
 export type ButtonVariant = "primary" | "ghost" | "danger";
 export type ButtonSize = "sm" | "md" | "lg";
 
-const sizeStyles: Record<ButtonSize, ReturnType<typeof css>> = {
+// Variant and size token maps
+const sizeMap: Record<ButtonSize, ReturnType<typeof css>> = {
   sm: css`
     padding: 6px 12px;
     font-size: 0.8rem;
@@ -24,7 +25,7 @@ const sizeStyles: Record<ButtonSize, ReturnType<typeof css>> = {
   `,
 };
 
-const variantStyles: Record<ButtonVariant, ReturnType<typeof css>> = {
+const variantMap: Record<ButtonVariant, ReturnType<typeof css>> = {
   primary: css`
     background: var(--glass-accent);
     color: #ffffff;
@@ -42,7 +43,13 @@ const variantStyles: Record<ButtonVariant, ReturnType<typeof css>> = {
   `,
 };
 
-const ButtonRoot = styled(motion.button)<{ $variant: ButtonVariant; $size: ButtonSize }>`
+// Module-level styled(motion.button) so tests can use the mocked motion.button properly.
+// Using HTMLMotionProps as the base avoids the onAnimationStart type conflict between
+// React's AnimationEventHandler and framer-motion's AnimationDefinition handler.
+const ButtonRoot = styled(motion.button)<{
+  $variant: ButtonVariant;
+  $size: ButtonSize;
+}>`
   display: inline-flex;
   align-items: center;
   justify-content: center;
@@ -51,26 +58,26 @@ const ButtonRoot = styled(motion.button)<{ $variant: ButtonVariant; $size: Butto
   font-weight: 500;
   cursor: pointer;
   transition: filter 0.15s ease;
-
-  ${({ $variant }: { $variant: ButtonVariant }) => variantStyles[$variant]};
-  ${({ $size }: { $size: ButtonSize }) => sizeStyles[$size]};
-
+  ${({ $variant }) => variantMap[$variant as ButtonVariant]};
+  ${({ $size }) => sizeMap[$size as ButtonSize]};
   &:disabled {
     opacity: 0.5;
     cursor: not-allowed;
   }
 `;
 
-export interface GlassButtonProps extends React.ComponentPropsWithoutRef<"button"> {
+// Public interface extends HTMLMotionProps so onAnimationStart matches the styled component.
+export interface GlassButtonProps extends Omit<HTMLMotionProps<"button">, "ref"> {
   variant?: ButtonVariant;
   size?: ButtonSize;
-  children?: React.ReactNode;
 }
 
 export const GlassButton = React.memo(function GlassButton({
   variant = "primary",
   size = "md",
   children,
+  whileHover,
+  whileTap,
   ...rest
 }: GlassButtonProps) {
   const prefersReduced = usePrefersReducedMotion();
@@ -78,10 +85,10 @@ export const GlassButton = React.memo(function GlassButton({
     <ButtonRoot
       $variant={variant}
       $size={size}
-      whileHover={prefersReduced ? undefined : { scale: 1.03 }}
-      whileTap={prefersReduced ? undefined : { scale: 0.97 }}
+      whileHover={whileHover ?? (prefersReduced ? undefined : { scale: 1.03 })}
+      whileTap={whileTap ?? (prefersReduced ? undefined : { scale: 0.97 })}
       transition={prefersReduced ? undefined : { duration: 0.15 }}
-      {...(rest as any)}
+      {...rest}
     >
       {children}
     </ButtonRoot>

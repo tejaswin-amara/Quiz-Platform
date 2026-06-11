@@ -37,6 +37,7 @@ public class AuthService {
         return issueToken(saved);
     }
 
+    @Transactional(readOnly = true)
     public AuthResponse login(AuthLoginRequest request) {
         String normalizedEmail = request.email().trim().toLowerCase();
         UserEntity entity = userRepository.findByEmailIgnoreCase(normalizedEmail)

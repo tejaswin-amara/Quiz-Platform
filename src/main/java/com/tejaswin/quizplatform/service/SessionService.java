@@ -430,7 +430,15 @@ public class SessionService {
         }
         List<Question> questions = quizPlatformService.getQuizQuestions(session.getQuizCode());
         int currentIndex = currentQuestionIndex(session, questions.size());
-        int nextIndex = Math.min(currentIndex + 1, Math.max(0, questions.size() - 1));
+        int nextIndex = currentIndex + 1;
+
+        // BUG-FIX: at the last question, end the session instead of staying stuck
+        if (nextIndex >= questions.size()) {
+            session.setState("COMPLETED");
+            touchSession(session, true);
+            return Map.of("sessionId", sessionId, "state", session.getState(), "message", "Session completed after last question");
+        }
+
         session.setForcedQuestionIndex((long) nextIndex);
         session.setStartEpochMs(System.currentTimeMillis() - ((long) nextIndex * session.getQuestionDurationSeconds() * 1000L));
         touchSession(session, true);
@@ -480,19 +488,43 @@ public class SessionService {
         );
     }
 
+    /**
+     * Clean up stale sessions in two passes:
+     *   1. Non-completed sessions inactive for {@code expiryMinutes} (default 45 min).
+     *   2. Completed sessions inactive for 7 days — long enough for hosts to export results.
+     */
     @Scheduled(fixedDelayString = "${quiz.session.cleanup-interval-ms:60000}")
     @Transactional
     public void cleanupExpiredSessions() {
         long now = System.currentTimeMillis();
-        long expiryMillis = expiryMinutes * 60_000L;
-        List<SessionEntity> expired = sessionRepository.findByLastActivityEpochMsLessThan(now - expiryMillis);
+        long activeExpiryMs   = expiryMinutes * 60_000L;
+        long completedExpiryMs = 7L * 24 * 60 * 60 * 1000L; // 7 days
+
+        List<SessionEntity> expired = sessionRepository.findByLastActivityEpochMsLessThan(now - activeExpiryMs)
+                .stream()
+                .filter(s -> !"COMPLETED".equals(s.getState()))
+                .toList();
+
+        List<SessionEntity> expiredCompleted = sessionRepository.findByLastActivityEpochMsLessThan(now - completedExpiryMs)
+                .stream()
+                .filter(s -> "COMPLETED".equals(s.getState()))
+                .toList();
+
+        int removed = 0;
         for (SessionEntity session : expired) {
             playerRepository.deleteBySessionId(session.getSessionId());
             resultRepository.deleteBySessionId(session.getSessionId());
             sessionRepository.delete(session);
+            removed++;
         }
-        if (!expired.isEmpty()) {
-            log.info("event=session_cleanup removed={} remaining={}", expired.size(), sessionRepository.count());
+        for (SessionEntity session : expiredCompleted) {
+            playerRepository.deleteBySessionId(session.getSessionId());
+            resultRepository.deleteBySessionId(session.getSessionId());
+            sessionRepository.delete(session);
+            removed++;
+        }
+        if (removed > 0) {
+            log.info("event=session_cleanup removed={} remaining={}", removed, sessionRepository.count());
         }
     }
 
@@ -545,7 +577,7 @@ public class SessionService {
 
     private void requireHostOwner(SessionEntity session, Long callerUserId) {
         if (callerUserId == null || !callerUserId.equals(session.getHostUserId())) {
-            throw new IllegalStateException("Only session host can perform this operation");
+            throw new AccessDeniedException("Only the session host can perform this operation");
         }
     }
 

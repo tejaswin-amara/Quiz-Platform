@@ -318,10 +318,12 @@ function renderDashboard() {
   const graphHost = byId("dashboard-graph");
   graphHost.innerHTML = "";
   const values = history.slice(-8).map((item) => Number(item.avg));
-  while (values.length < 8) values.unshift(Math.floor(Math.random() * 35) + 55);
+  // Pad with 0-height placeholders — never show fake random data
+  while (values.length < 8) values.unshift(0);
   values.forEach((value) => {
     const bar = document.createElement("span");
-    bar.style.height = `${Math.max(20, Math.min(100, value))}%`;
+    bar.style.height = value > 0 ? `${Math.max(8, Math.min(100, value))}%` : "8%";
+    bar.style.opacity = value > 0 ? "1" : "0.25";
     graphHost.appendChild(bar);
   });
 }
@@ -770,6 +772,19 @@ async function loadSessionState() {
   }
 }
 
+/**
+ * Guard that redirects to the Auth screen when the action requires authentication.
+ * Returns true if the caller may proceed (user is logged in), false if redirected.
+ */
+function requireAuth(actionLabel = "This action") {
+  if (state.authToken) return true;
+  showStatus("global-error-text", ""); // clear any old global error
+  showGlobalError(`${actionLabel} requires an account. Please log in or register.`);
+  setAuthTab("login");
+  showScreen("auth");
+  return false;
+}
+
 function bindNavigation() {
   document.querySelectorAll("[data-nav]").forEach((button) => {
     button.addEventListener("click", () => showScreen(button.dataset.nav));
@@ -777,15 +792,33 @@ function bindNavigation() {
 
   byId("nav-profile").addEventListener("click", () => showScreen("profile"));
   byId("home-start-demo").addEventListener("click", startDemoQuiz);
-  byId("home-host").addEventListener("click", () => showScreen("create"));
-  byId("home-join").addEventListener("click", () => showScreen("join"));
+  byId("home-host").addEventListener("click", () => {
+    if (!requireAuth("Hosting a quiz")) return;
+    showScreen("create");
+  });
+  byId("home-join").addEventListener("click", () => {
+    if (!requireAuth("Joining a session")) return;
+    showScreen("join");
+  });
 
-  byId("dashboard-start-host").addEventListener("click", () => showScreen("create"));
+  byId("dashboard-start-host").addEventListener("click", () => {
+    if (!requireAuth("Hosting a quiz")) return;
+    showScreen("create");
+  });
   byId("dashboard-demo").addEventListener("click", startDemoQuiz);
-  byId("dashboard-join").addEventListener("click", () => showScreen("join"));
+  byId("dashboard-join").addEventListener("click", () => {
+    if (!requireAuth("Joining a session")) return;
+    showScreen("join");
+  });
 
-  byId("create-submit").addEventListener("click", createSession);
-  byId("join-submit").addEventListener("click", joinSession);
+  byId("create-submit").addEventListener("click", () => {
+    if (!requireAuth("Creating a session")) return;
+    createSession();
+  });
+  byId("join-submit").addEventListener("click", () => {
+    if (!requireAuth("Joining a session")) return;
+    joinSession();
+  });
   byId("start-session").addEventListener("click", startSession);
   byId("end-session").addEventListener("click", endSession);
   byId("kick-player").addEventListener("click", kickSelectedPlayer);

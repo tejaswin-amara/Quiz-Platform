@@ -1,4 +1,5 @@
 import React, { useEffect, useRef, useState } from "react";
+import ReactDOM from "react-dom";
 import styled from "styled-components";
 import { motion, AnimatePresence } from "framer-motion";
 import { glassSurface } from "./glassSurface";
@@ -53,8 +54,10 @@ export const GlassModal = ({ open, onClose, title, children, announcement }: Gla
   useEffect(() => {
     if (!open) return;
 
-    const root = document.getElementById("root");
-    if (root) root.setAttribute("aria-hidden", "true");
+    // BUG-FIX: modal is rendered via portal OUTSIDE #root, so we can safely
+    // hide the main app content without hiding the modal itself.
+    const mainContent = document.getElementById("root");
+    if (mainContent) mainContent.setAttribute("aria-hidden", "true");
 
     if (announcement) setLiveMessage(announcement);
 
@@ -103,7 +106,7 @@ export const GlassModal = ({ open, onClose, title, children, announcement }: Gla
     document.addEventListener("keydown", handleKeyDown);
     return () => {
       document.removeEventListener("keydown", handleKeyDown);
-      if (root) root.removeAttribute("aria-hidden");
+      if (mainContent) mainContent.removeAttribute("aria-hidden");
       previousFocused?.focus();
     };
   }, [open, onClose, announcement]);
@@ -120,7 +123,7 @@ export const GlassModal = ({ open, onClose, title, children, announcement }: Gla
         exit: { opacity: 0, scale: 0.92 },
       };
 
-  return (
+  const modalContent = (
     <>
       <Announcement aria-live="polite" aria-atomic="true">
         {liveMessage}
@@ -156,4 +159,9 @@ export const GlassModal = ({ open, onClose, title, children, announcement }: Gla
       </AnimatePresence>
     </>
   );
+
+  // Render into a portal appended to document.body so the modal DOM lives
+  // outside #root. This means setting aria-hidden on #root correctly hides
+  // only the background content, not the modal itself.
+  return ReactDOM.createPortal(modalContent, document.body);
 };

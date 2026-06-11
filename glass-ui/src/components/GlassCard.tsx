@@ -1,12 +1,12 @@
 import React from "react";
 import styled, { css } from "styled-components";
-import { motion } from "framer-motion";
+import { motion, HTMLMotionProps } from "framer-motion";
 import { glassSurface } from "./glassSurface";
 import { usePrefersReducedMotion } from "../hooks/usePrefersReducedMotion";
 
 type CardSize = "sm" | "md" | "lg";
 
-const sizeStyles = {
+const sizeMap: Record<CardSize, ReturnType<typeof css>> = {
   sm: css`
     padding: 16px;
     gap: 12px;
@@ -26,27 +26,29 @@ const sizeStyles = {
 
 const CardRoot = styled(motion.section)<{ $size: CardSize }>`
   ${glassSurface};
-  ${({ $size }: { $size: CardSize }) => sizeStyles[$size]};
+  ${({ $size }) => sizeMap[$size as CardSize]};
   display: grid;
   contain: layout style;
 `;
 
-export interface GlassCardProps extends React.ComponentPropsWithoutRef<"section"> {
+export interface GlassCardProps extends Omit<HTMLMotionProps<"section">, "ref"> {
   size?: CardSize;
-  children?: React.ReactNode;
 }
 
 export const GlassCard = React.memo(function GlassCard({
   size = "md",
   children,
+  whileHover,
   ...rest
 }: GlassCardProps) {
   const prefersReduced = usePrefersReducedMotion();
   return (
     <CardRoot
       $size={size}
-      whileHover={prefersReduced ? undefined : { y: -4, transition: { duration: 0.2 } }}
-      {...(rest as any)}
+      whileHover={
+        whileHover ?? (prefersReduced ? undefined : { y: -4, transition: { duration: 0.2 } })
+      }
+      {...rest}
     >
       {children}
     </CardRoot>

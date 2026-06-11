@@ -78,7 +78,7 @@ public class SecurityConfig {
                         .requestMatchers("/session/create", "/session/*/pause", "/session/*/resume", "/session/*/end", "/session/*/close-lobby", "/session/*/force-next", "/session/*/participants/*", "/session/*/answers/review").hasAnyRole("HOST", "ADMIN")
                         .requestMatchers("/api/complexities", "/api/recommendations", "/api/quizzes/*/questions", "/api/questions").hasAnyRole("USER", "HOST", "ADMIN")
                         .requestMatchers("/api/**", "/dsa/**").hasAnyRole("HOST", "ADMIN")
-                        .requestMatchers("/demo/start").hasAnyRole("HOST", "ADMIN")
+                        .requestMatchers("/demo/start").authenticated()  // any authenticated user may run a demo
                         .anyRequest().authenticated()
                 )
                 .addFilterBefore(jwtAuthenticationFilter, UsernamePasswordAuthenticationFilter.class);
