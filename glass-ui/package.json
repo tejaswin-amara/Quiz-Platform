@@ -109,7 +109,7 @@
     ]
   },
   "devDependencies": {
-    "@commitlint/cli": "^19.8.1",
+    "@commitlint/cli": "^21.0.2",
     "@commitlint/config-conventional": "^19.8.1",
     "@storybook/addon-a11y": "^10.3.6",
     "@storybook/addon-docs": "^10.3.6",
