@@ -60,6 +60,15 @@ jobs:
       - uses: github/codeql-action/init@v4
         with:
           languages: java
+          # Exclude one intentional false-positive: this is a stateless REST API
+          # authenticating exclusively via JWT Bearer tokens in the Authorization
+          # header — never session cookies. CSRF attacks require cookie-based
+          # session auth to succeed and are architecturally impossible here.
+          # SessionCreationPolicy.STATELESS is enforced in SecurityConfig.java.
+          config: |
+            query-filters:
+              - exclude:
+                  id: java/spring-disabled-csrf-protection
       - uses: actions/setup-java@v4
         with:
           distribution: temurin
