@@ -36,7 +36,7 @@ jobs:
 
     steps:
       # ── Checkout ────────────────────────────────────────
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v6
 
       # ── Node setup for Storybook ─────────────────────────
       - uses: actions/setup-node@v4
