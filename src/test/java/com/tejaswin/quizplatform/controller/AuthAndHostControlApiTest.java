@@ -102,4 +102,25 @@ class AuthAndHostControlApiTest {
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.state").value("COMPLETED"));
     }
+    @Test
+    void shouldReturn401Or403ForUnauthenticatedProtectedEndpoints() throws Exception {
+        // Unguarded: unauthenticated access to a session endpoint must never return 200.
+        // Spring Security's default for anonymous + stateless returns 403.
+        mockMvc.perform(get("/session/SFAKE001/question"))
+                .andExpect(status().isForbidden());
+    }
+
+    @Test
+    void shouldAllowUserRoleToDemoAfterSecurityConfigChange() throws Exception {
+        // BUG-1 fix: /demo/start changed from hasAnyRole(HOST,ADMIN) to authenticated()
+        // so USER-role accounts must now be able to start a demo session.
+        String userToken = registerAndGetToken("user-demo-guard@test.com", "USER");
+
+        mockMvc.perform(get("/demo/start")
+                        .header("Authorization", "Bearer " + userToken))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.sessionId").exists())
+                .andExpect(jsonPath("$.playerCount").value(4));
+    }
+
 }

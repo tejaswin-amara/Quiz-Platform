@@ -2,16 +2,19 @@
 
 > A full-stack, production-ready quiz platform built with Spring Boot, MySQL, and a modern glassmorphism-inspired UI. The platform combines real-time quiz hosting with practical implementations of Data Structures & Algorithms (DSA), making it both an interactive learning system and a showcase of core computer science concepts.
 
+[![backend-ci](https://github.com/tejaswin-amara/Quiz-Platform/actions/workflows/backend-ci.yml/badge.svg?branch=main)](https://github.com/tejaswin-amara/Quiz-Platform/actions/workflows/backend-ci.yml)
+[![glass-ui-ci](https://github.com/tejaswin-amara/Quiz-Platform/actions/workflows/glass-ui-ci.yml/badge.svg?branch=main)](https://github.com/tejaswin-amara/Quiz-Platform/actions/workflows/glass-ui-ci.yml)
+[![Pages](https://github.com/tejaswin-amara/Quiz-Platform/actions/workflows/frontend-pages-deploy.yml/badge.svg?branch=main)](https://tejaswin-amara.github.io/Quiz-Platform/)
 ![Java](https://img.shields.io/badge/Java-17+-orange)
-![Spring Boot](https://img.shields.io/badge/Spring_Boot-3.x-brightgreen)
+![Spring Boot](https://img.shields.io/badge/Spring_Boot-3.3.5-brightgreen)
 ![MySQL](https://img.shields.io/badge/MySQL-8.0-blue)
 ![Docker](https://img.shields.io/badge/Docker-Ready-2496ED)
-![Flyway](https://img.shields.io/badge/Flyway-Migrations-red)
 ![JWT](https://img.shields.io/badge/Auth-JWT-success)
-![Build](https://img.shields.io/badge/Build-Passing-success)
-![Tests](https://img.shields.io/badge/Tests-Passing-success)
 ![Version](https://img.shields.io/badge/Version-v0.0.1-blue)
-![Status](https://img.shields.io/badge/Status-Production_Ready-success)
+
+**🌐 Live app:** https://tejaswin-amara.github.io/Quiz-Platform/  
+**📖 Storybook:** https://tejaswin-amara.github.io/Quiz-Platform/storybook/  
+**🚀 Backend:** Deploy to Railway — see [DEPLOYMENT.md](./DEPLOYMENT.md)
 
 ---
 
