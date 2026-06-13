@@ -4,8 +4,6 @@ import com.tejaswin.quizplatform.model.Question;
 import com.tejaswin.quizplatform.persistence.entity.SessionEntity;
 import com.tejaswin.quizplatform.persistence.entity.UserEntity;
 import com.tejaswin.quizplatform.persistence.entity.UserRole;
-import com.tejaswin.quizplatform.persistence.repository.PlayerRepository;
-import com.tejaswin.quizplatform.persistence.repository.ResultRepository;
 import com.tejaswin.quizplatform.persistence.repository.SessionRepository;
 import com.tejaswin.quizplatform.persistence.repository.UserRepository;
 import org.junit.jupiter.api.BeforeEach;
@@ -36,15 +34,12 @@ class BugFixRegressionTest {
     @Autowired private SessionService sessionService;
     @Autowired private UserRepository userRepository;
     @Autowired private SessionRepository sessionRepository;
-    @Autowired private PlayerRepository playerRepository;
-    @Autowired private ResultRepository resultRepository;
 
     private Long hostUserId;
     private Long otherHostId;
 
     @BeforeEach
     void setup() {
-        // fresh state per test
         userRepository.deleteAll();
 
         UserEntity host = new UserEntity();
@@ -61,94 +56,101 @@ class BugFixRegressionTest {
         other.setRole(UserRole.HOST);
         otherHostId = userRepository.save(other).getId();
 
-        // two questions so we can advance from Q0 → Q1 and then test last-Q boundary
-        quizPlatformService.addQuestion(new Question(3001, "Reg-Q1", List.of("a", "b"), 0, "Arrays", 2, 2));
-        quizPlatformService.addQuestion(new Question(3002, "Reg-Q2", List.of("a", "b"), 1, "Graphs", 3, 3));
+        // Two questions sufficient for all test scenarios
+        quizPlatformService.addQuestion(
+                new Question(3001, "Reg-Q1", List.of("a", "b"), 0, "Arrays", 2, 2));
+        quizPlatformService.addQuestion(
+                new Question(3002, "Reg-Q2", List.of("a", "b"), 1, "Graphs", 3, 3));
     }
 
-    // ── BUG-2 ──────────────────────────────────────────────────────────────
+    // ── BUG-2 ──────────────────────────────────────────────────────────────────
     @Test
-    @DisplayName("BUG-2: requireHostOwner throws AccessDeniedException (403), not IllegalStateException (400)")
+    @DisplayName("BUG-2: non-owner host gets AccessDeniedException (→ HTTP 403), not IllegalStateException")
     void requireHostOwnerThrowsAccessDeniedException() {
         Map<String, Object> created = sessionService.createSession(
-                hostUserId, "Owner Test", List.of(3001L, 3002L), 30);
+                hostUserId, "Owner Test", List.of(3001L), 30);
         String sessionId = String.valueOf(created.get("sessionId"));
 
-        // A different authenticated host who did NOT create the session
-        assertThrows(AccessDeniedException.class,
+        // otherHostId did not create this session
+        assertThrows(
+                AccessDeniedException.class,
                 () -> sessionService.pauseSession(sessionId, otherHostId),
-                "Non-owner host must receive AccessDeniedException (→ HTTP 403)");
+                "Non-owner host must receive AccessDeniedException (HTTP 403)");
     }
 
-    // ── BUG-4 ──────────────────────────────────────────────────────────────
+    // ── BUG-4 ──────────────────────────────────────────────────────────────────
     @Test
-    @DisplayName("BUG-4: forceNextQuestion completes session when already at last question")
+    @DisplayName("BUG-4: forceNextQuestion on the last question transitions state to COMPLETED")
     void forceNextQuestionAtLastQuestionEndsSession() {
         Map<String, Object> created = sessionService.createSession(
                 hostUserId, "Force-Next Test", List.of(3001L, 3002L), 30);
         String sessionId = String.valueOf(created.get("sessionId"));
-        sessionService.joinSession(sessionId, "Alice", null);
 
-        // Start the session (moves to Q0)
+        // Need at least one player to start
+        sessionService.joinSession(sessionId, "Alice", null);
+        // Start the session (Q0)
         sessionService.getSessionQuestion(sessionId, true, hostUserId);
 
-        // Force-advance to Q1 (last question)
+        // Advance to Q1 (last question for a 2-question quiz)
         Map<String, Object> afterFirst = sessionService.forceNextQuestion(sessionId, hostUserId);
-        assertEquals("LIVE", afterFirst.get("state"), "After first force-next session should still be LIVE");
+        assertEquals("LIVE", afterFirst.get("state"),
+                "After advancing to Q1 session should still be LIVE");
         assertEquals(1, ((Number) afterFirst.get("forcedQuestionIndex")).intValue());
 
-        // Force-advance again: already at last question → session must complete
+        // Force-advance again: already at last question — must complete
         Map<String, Object> afterLast = sessionService.forceNextQuestion(sessionId, hostUserId);
         assertEquals("COMPLETED", afterLast.get("state"),
-                "Forcing next on the last question must transition state to COMPLETED");
+                "Forcing next on the last question must set state to COMPLETED");
 
-        // Verify state persisted in DB
-        SessionEntity persisted = sessionRepository.findBySessionId(sessionId).orElseThrow();
+        // Verify persisted in DB — SessionRepository.findById uses sessionId as @Id
+        SessionEntity persisted = sessionRepository.findById(sessionId).orElseThrow();
         assertEquals("COMPLETED", persisted.getState());
     }
 
-    // ── BUG-5 ──────────────────────────────────────────────────────────────
+    // ── BUG-5a ─────────────────────────────────────────────────────────────────
     @Test
-    @DisplayName("BUG-5: cleanupExpiredSessions must not delete COMPLETED sessions within 7-day window")
+    @DisplayName("BUG-5: completed sessions are NOT removed by the short-term active-session cleanup")
     void completedSessionsAreNotDeletedByShortTermCleanup() {
-        // Create and immediately complete a session
         Map<String, Object> created = sessionService.createSession(
                 hostUserId, "Cleanup Test", List.of(3001L), 5);
         String sessionId = String.valueOf(created.get("sessionId"));
+
         sessionService.joinSession(sessionId, "Alice", null);
         sessionService.getSessionQuestion(sessionId, true, hostUserId);
-        sessionService.endSession(sessionId, hostUserId);   // → COMPLETED
+        sessionService.endSession(sessionId, hostUserId);  // → COMPLETED
 
-        // Backdate the lastActivityEpochMs to simulate 46-minute-old session
-        // (older than the active-session expiry of 45 min, but within 7-day completed-session window)
-        SessionEntity session = sessionRepository.findBySessionId(sessionId).orElseThrow();
+        // Backdate to 46 min ago (beyond active-session expiry of 45 min)
+        SessionEntity session = sessionRepository.findById(sessionId).orElseThrow();
         session.setLastActivityEpochMs(System.currentTimeMillis() - 46L * 60 * 1000);
         sessionRepository.save(session);
 
-        // Run cleanup: should NOT delete this COMPLETED session
         sessionService.cleanupExpiredSessions();
 
-        assertTrue(sessionRepository.findBySessionId(sessionId).isPresent(),
-                "COMPLETED session should survive the short-term active-session cleanup window");
+        assertTrue(
+                sessionRepository.findById(sessionId).isPresent(),
+                "COMPLETED session must survive the short-term active-session cleanup window");
     }
 
-    // ── BUG-5 complementary ────────────────────────────────────────────────
+    // ── BUG-5b ─────────────────────────────────────────────────────────────────
     @Test
-    @DisplayName("BUG-5: cleanupExpiredSessions DOES remove stale non-completed sessions")
+    @DisplayName("BUG-5: stale non-completed sessions ARE removed by cleanup")
     void staleActiveSessionsAreRemovedByCleanup() {
         Map<String, Object> created = sessionService.createSession(
                 hostUserId, "Stale Lobby", List.of(3001L), 30);
         String sessionId = String.valueOf(created.get("sessionId"));
 
-        // Session is in LOBBY state — never started. Backdate to 46 min ago.
-        SessionEntity session = sessionRepository.findBySessionId(sessionId).orElseThrow();
+        // Verify it is in LOBBY state
+        SessionEntity session = sessionRepository.findById(sessionId).orElseThrow();
         assertEquals("LOBBY", session.getState());
+
+        // Backdate to 46 min ago
         session.setLastActivityEpochMs(System.currentTimeMillis() - 46L * 60 * 1000);
         sessionRepository.save(session);
 
         sessionService.cleanupExpiredSessions();
 
-        assertTrue(sessionRepository.findBySessionId(sessionId).isEmpty(),
+        assertTrue(
+                sessionRepository.findById(sessionId).isEmpty(),
                 "Stale LOBBY sessions must be removed by cleanup");
     }
 }
