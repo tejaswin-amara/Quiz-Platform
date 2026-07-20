@@ -1,3 +1,7 @@
+<div align="center">
+<img src="assets/header.svg" width="100%" alt="Quiz Platform Header" />
+</div>
+
 # Quiz Platform
 
 > A full-stack, real-time multiplayer quiz platform combining live quiz hosting with practical Data Structures & Algorithms implementations — Spring Boot backend, a glassmorphism React component library (`glass-ui`) on the frontend.
@@ -114,3 +118,7 @@ MIT — see [LICENSE](./LICENSE). `glass-ui` ships under its own [MIT license](.
 ---
 
 <div align="center">Star ⭐ this repo if it's useful to you.</div>
+
+<div align="center">
+<img src="assets/footer.svg" width="100%" alt="Footer" />
+</div>
