@@ -21,7 +21,7 @@
 
 ## 💡 What it is
 
-Quiz Platform is a real-time quiz hosting and analytics system built to demonstrate DSA-2 coursework through a complete, working product rather than isolated algorithm exercises. Every core operation — question storage, live leaderboard ranking, topic recommendations, analytics — is backed by a specific data structure, not a generic library call.
+Quiz Platform is a real-time quiz hosting and analytics system. Every core operation — question storage, live leaderboard ranking, topic recommendations, analytics — is backed by a specific data structure, not a generic library call.
 
 - **Live multiplayer sessions** — host a quiz, share a code, participants join a lobby, questions run live with automatic progression
 - **Real-time leaderboard & analytics** — score-driven rankings, topic-wise breakdowns, performance trends
