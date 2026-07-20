@@ -113,7 +113,7 @@
     "@commitlint/config-conventional": "^21.0.2",
     "@storybook/addon-a11y": "^10.4.6",
     "@storybook/addon-docs": "^10.4.6",
-    "@storybook/addon-onboarding": "^10.3.6",
+    "@storybook/addon-onboarding": "^10.4.6",
     "@storybook/preset-create-react-app": "^10.3.6",
     "@storybook/react-webpack5": "^10.3.6",
     "@testing-library/dom": "^10.4.1",
