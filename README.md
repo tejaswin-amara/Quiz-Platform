@@ -18,7 +18,9 @@
 ![License](https://img.shields.io/badge/License-MIT-yellow.svg)
 
 **🌐 Live app:** https://tejaswin-amara.github.io/Quiz-Platform/
+
 **📖 Storybook:** https://tejaswin-amara.github.io/Quiz-Platform/storybook/
+
 **🚀 Deploy guide:** [DEPLOYMENT.md](./DEPLOYMENT.md)
 
 ---
