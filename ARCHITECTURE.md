@@ -1,6 +1,6 @@
-# Architecture
+# 🏛️ Architecture
 
-## System Overview
+## 🏗️ System Overview
 
 ```text
 ┌───────────────────────────┐
@@ -25,7 +25,7 @@
 └───────────────────────────┘
 ```
 
-## Live Session Flow
+## 🔄 Live Session Flow
 
 ```text
 Host creates session
@@ -55,7 +55,7 @@ Results generated
 Analytics produced
 ```
 
-## DSA → Feature Mapping
+## 🧠 DSA → Feature Mapping
 
 Every "smart" feature is backed by a specific data structure in `src/main/java/com/tejaswin/quizplatform/dsa/`, not a generic library call.
 
@@ -69,7 +69,7 @@ Every "smart" feature is backed by a specific data structure in `src/main/java/c
 
 A live view into these operations is exposed via `GET /dsa/insights` and surfaced in the frontend's DSA Insights panel — e.g. `BST Search → Question Retrieved`, `Heap Updated → Leaderboard Recalculated`, `Graph Traversal → Recommendation Generated`.
 
-## Demo Mode
+## 🚀 Demo Mode
 
 ```http
 GET /demo/start
@@ -77,7 +77,7 @@ GET /demo/start
 
 One call seeds a full session — sample questions, demo participants, leaderboard data — for presentations, vivas, or quick manual testing. See `DemoController.java`.
 
-## Core Entities
+## 💾 Core Entities
 
 `src/main/java/com/tejaswin/quizplatform/persistence/entity/`
 
@@ -90,11 +90,11 @@ ResultEntity · QuizResultEntity
 
 Persisted via Spring Data JPA + Hibernate, with schema versioned through Flyway migrations in `src/main/resources/db`.
 
-## Frontend Screens (`glass-ui`)
+## 🖥️ Frontend Screens (`glass-ui`)
 
 Home · Login · Register · Dashboard · Create Session · Join Session · Lobby · Live Quiz · Leaderboard · Results · Profile · Settings · DSA Insights Panel
 
-## Package Boundaries
+## 📦 Package Boundaries
 
 - **`src/`** — the Spring Boot backend, standard Maven layout, deployed to Railway.
 - **`glass-ui/`** — an independent, MIT-licensed npm package (`build:lib` via `tsup`) with its own CI (`glass-ui-ci`, `glass-ui-release`), lint/typecheck/test scripts, and Storybook. It's consumable outside this repo.

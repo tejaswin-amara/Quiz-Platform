@@ -19,7 +19,7 @@
 
 ---
 
-## What it is
+## 💡 What it is
 
 Quiz Platform is a real-time quiz hosting and analytics system built to demonstrate DSA-2 coursework through a complete, working product rather than isolated algorithm exercises. Every core operation — question storage, live leaderboard ranking, topic recommendations, analytics — is backed by a specific data structure, not a generic library call.
 
@@ -42,7 +42,7 @@ For the full breakdown:
 
 ---
 
-## Quick Start
+## 🚀 Quick Start
 
 ### Backend (Spring Boot)
 
@@ -70,7 +70,7 @@ npm run storybook   # Storybook   → http://localhost:6006
 
 ---
 
-## Tech Stack
+## 🛠️ Tech Stack
 
 | Layer | Stack |
 |---|---|
@@ -84,7 +84,7 @@ npm run storybook   # Storybook   → http://localhost:6006
 
 ---
 
-## Repository Layout
+## 📂 Repository Layout
 
 ```
 Quiz-Platform/
@@ -103,11 +103,11 @@ Quiz-Platform/
 
 ---
 
-## License
+## 📜 License
 
 MIT — see [LICENSE](./LICENSE). `glass-ui` ships under its own [MIT license](./glass-ui/LICENSE) so it can be used independently of the rest of the platform.
 
-## Author
+## 🧑‍💻 Author
 
 **Tejaswin Amara** — [GitHub](https://github.com/tejaswin-amara) · [LinkedIn](https://linkedin.com/in/tejaswin-amara)
 

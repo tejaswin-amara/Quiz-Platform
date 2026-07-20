@@ -1,11 +1,11 @@
-# Deployment Guide — Quiz Platform Live
+# 🚀 Deployment Guide — Quiz Platform Live
 
 > **Architecture summary:** Static frontend on GitHub Pages + Spring Boot API on Railway + MySQL on Railway.
 > The `glass-ui` Storybook deploys to `/storybook` on the same Pages site.
 
 ---
 
-## Table of Contents
+## 📑 Table of Contents
 
 1. [Architecture overview](#1-architecture-overview)
 2. [GitHub Pages — static frontend + Storybook](#2-github-pages)
@@ -18,7 +18,7 @@
 
 ---
 
-## 1. Architecture Overview
+## 1. 🏛️ Architecture Overview
 
 ```
 ┌──────────────────────────────────────────────────────────────┐
@@ -48,7 +48,7 @@
 
 ---
 
-## 2. GitHub Pages
+## 2. 📄 GitHub Pages
 
 ### 2.1 First-time setup (do once)
 
@@ -96,7 +96,7 @@ Steps:
 
 ---
 
-## 3. Railway Backend
+## 3. 🚂 Railway Backend
 
 ### 3.1 Create the project
 
@@ -181,7 +181,7 @@ No manual steps needed.
 
 ---
 
-## 4. Local Development
+## 4. 💻 Local Development
 
 ### 4.1 Prerequisites
 
@@ -254,7 +254,7 @@ npx serve src/main/resources/static -p 3000
 
 ---
 
-## 5. Environment Variables
+## 5. 🔑 Environment Variables
 
 ### Backend (Spring Boot)
 
@@ -281,7 +281,7 @@ npx serve src/main/resources/static -p 3000
 
 ---
 
-## 6. CI/CD Pipeline
+## 6. 🔄 CI/CD Pipeline
 
 ### Workflows
 
@@ -304,7 +304,7 @@ copilot/build-java-quiz-platform  ← active dev branch (all CI runs here)
 
 ---
 
-## 7. Rollback
+## 7. ⏪ Rollback
 
 ### GitHub Pages rollback
 
@@ -346,7 +346,7 @@ SHOW TABLES;
 
 ---
 
-## 8. Verification Checklist
+## 8. ✅ Verification Checklist
 
 Run this after every deploy to confirm everything is healthy.
 

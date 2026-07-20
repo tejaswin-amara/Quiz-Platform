@@ -1,17 +1,17 @@
-# API Reference
+# 📡 API Reference
 
 Base URL: `http://localhost:8080` locally — see [DEPLOYMENT.md](./DEPLOYMENT.md) for the production Railway URL.
 
 All endpoints except `/auth/*` and `/demo/start` expect an `Authorization: Bearer <jwt>` header. See [SECURITY.md](./SECURITY.md) for the auth model.
 
-## Auth — `AuthController` (`/auth`)
+## 🔐 Auth — `AuthController` (`/auth`)
 
 | Method | Path | Description |
 |---|---|---|
 | POST | `/auth/register` | Register a new user |
 | POST | `/auth/login` | Log in, receive a JWT |
 
-## Quiz & Question — `QuizController` (`/api`)
+## 📝 Quiz & Question — `QuizController` (`/api`)
 
 | Method | Path | Description |
 |---|---|---|
@@ -28,7 +28,7 @@ All endpoints except `/auth/*` and `/demo/start` expect an `Authorization: Beare
 | GET | `/api/recommendations` | Get topic recommendations (Graph traversal) |
 | GET | `/api/complexities` | Get algorithmic complexity metadata |
 
-## Live Sessions — `SessionController` (`/session`)
+## 📡 Live Sessions — `SessionController` (`/session`)
 
 | Method | Path | Description |
 |---|---|---|
@@ -46,13 +46,13 @@ All endpoints except `/auth/*` and `/demo/start` expect an `Authorization: Beare
 | POST | `/session/{id}/participants/{participantId}/remove` | Host: remove a participant |
 | GET | `/session/{id}/answers/review` | Review submitted answers |
 
-## Demo — `DemoController` (`/demo`)
+## 🚀 Demo — `DemoController` (`/demo`)
 
 | Method | Path | Description |
 |---|---|---|
 | GET | `/demo/start` | Seed a full demo session in one call |
 
-## DSA Insights — `DsaController` (`/dsa`)
+## 🧠 DSA Insights — `DsaController` (`/dsa`)
 
 | Method | Path | Description |
 |---|---|---|
