@@ -33,7 +33,7 @@ jobs:
       - uses: actions/setup-java@v5
         with:
           distribution: temurin
-          java-version: '17'
+          java-version: '21'
           cache: maven
       - name: Build + tests + verification
         run: mvn -B -ntp verify
@@ -72,7 +72,7 @@ jobs:
       - uses: actions/setup-java@v5
         with:
           distribution: temurin
-          java-version: '17'
+          java-version: '21'
           cache: maven
       - name: Build for CodeQL
         run: mvn -B -ntp -DskipTests compile
