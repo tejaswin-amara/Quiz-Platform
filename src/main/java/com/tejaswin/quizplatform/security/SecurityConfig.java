@@ -11,6 +11,7 @@ import org.springframework.security.config.annotation.web.builders.HttpSecurity;
 import org.springframework.security.config.http.SessionCreationPolicy;
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.security.crypto.password.PasswordEncoder;
+import org.springframework.security.config.annotation.web.configurers.AbstractHttpConfigurer;
 import org.springframework.security.web.header.writers.ReferrerPolicyHeaderWriter;
 import org.springframework.security.web.SecurityFilterChain;
 import org.springframework.security.web.authentication.UsernamePasswordAuthenticationFilter;
@@ -45,9 +46,7 @@ public class SecurityConfig {
                 // JWT Bearer tokens in the Authorization header — never session
                 // cookies. CSRF attacks require cookie-based session auth to succeed,
                 // so CSRF protection provides no security value here.
-                // Using requireCsrfProtectionMatcher instead of csrf.disable() so
-                // static analysis tools can verify the intent explicitly.
-                .csrf(csrf -> csrf.requireCsrfProtectionMatcher(request -> false))
+                .csrf(AbstractHttpConfigurer::disable)
                 .cors(Customizer.withDefaults())
                 .headers(headers -> headers
                         .contentSecurityPolicy(csp -> csp.policyDirectives(
