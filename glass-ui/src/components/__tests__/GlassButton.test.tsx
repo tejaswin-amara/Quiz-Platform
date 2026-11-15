@@ -48,14 +48,16 @@ describe("GlassButton", () => {
     expect(screen.getByRole("button", { name: "Delete" })).toBeInTheDocument();
   });
 
-  it("handles click events", () => {
+  it("handles click events", async () => {
+    const user = userEvent.setup();
     const onClick = jest.fn();
     render(<GlassButton onClick={onClick}>Submit</GlassButton>, { wrapper });
-    userEvent.click(screen.getByRole("button", { name: "Submit" }));
+    await user.click(screen.getByRole("button", { name: "Submit" }));
     expect(onClick).toHaveBeenCalledTimes(1);
   });
 
-  it("does not fire click when disabled", () => {
+  it("does not fire click when disabled", async () => {
+    const user = userEvent.setup();
     const onClick = jest.fn();
     render(
       <GlassButton disabled onClick={onClick}>
@@ -63,7 +65,7 @@ describe("GlassButton", () => {
       </GlassButton>,
       { wrapper }
     );
-    userEvent.click(screen.getByRole("button", { name: "Disabled" }));
+    await user.click(screen.getByRole("button", { name: "Disabled" }));
     expect(onClick).not.toHaveBeenCalled();
   });
 
